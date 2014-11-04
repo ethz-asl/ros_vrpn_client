@@ -1,5 +1,5 @@
 <launch>
-  <node name="bluebird" type="ros_vrpn_client" pkg="ros_vrpn_client" output="screen">
-    <param name="vrpn_server_ip" value="192.168.1.100" />
+  <node name="sbx_firefly" type="ros_vrpn_client" pkg="ros_vrpn_client" output="screen">
+    <param name="vrpn_server_ip" value="192.168.1.101" />
   </node>
 </launch>

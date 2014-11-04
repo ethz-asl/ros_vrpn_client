@@ -3,6 +3,25 @@ ros_vrpn_client
 
 Ros interface for http://www.cs.unc.edu/Research/vrpn/
 
+Dependencies
+-------------------
+vrpn_catkin package from: https://github.com/ethz-asl/vrpn_catkin
+
+
+Usage
+-----------------
+You have to start a ROS node per tracked object and the ROS node name has to be the name of the trackable onject.
+ 
+     rosrun ros_vrpn_client ros_vrpn_client __name:=object_name _vrpn_server_ip:192.168.1.1
+
+Or in a launch file:
+
+    <node name="object_name" type="ros_vrpn_client" pkg="ros_vrpn_client" output="screen">
+      <param name="vrpn_server_ip" value="192.168.1.100" />
+    </node>
+
+Old Installation HowTo
+===============
 Installation Ubuntu
 -------------------
 Use install_vrpn.sh to download, compile, and install VRPN.
@@ -27,13 +46,6 @@ TF coord frames
    Hitting "Reset To Current Orientation" in the TrackingTools
    software (Trackable properties) aligns the object coord frame with
    the /optitrak frame.
-
-Running the code
-----------------
-
-1. Example to run node from command line:
-     ./bin/ros_vrpn_client __name:=torso_trackable _vrpn_server_ip:=192.168.2.110
-
 
 Coord frames vodoo
 ------------------

@@ -14,7 +14,7 @@ cs_add_executable(ros_vrpn_client
 )
 
 target_link_libraries(ros_vrpn_client 
-    vrpn ${BULLET_MATH_LIBRARY} pthread
+    ${BULLET_MATH_LIBRARY} pthread
 )
 
 cs_install()

@@ -3,12 +3,15 @@ ros_vrpn_client
 
 Ros interface for http://www.cs.unc.edu/Research/vrpn/
 
-Installation
-------------
+Installation Ubuntu
+-------------------
 Use install_vrpn.sh to download, compile, and install VRPN.
 Please consult the VRPN website if your run into some trouble.
 
-
+Installation OS X
+-----------------
+`brew install vrpn`
+DONE! :)
 
 TF coord frames
 ----------------

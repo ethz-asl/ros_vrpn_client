@@ -105,6 +105,7 @@ void VRPN_CALLBACK track_target (void *, const vrpn_TRACKERCB t)
     btQuaternion q_fix(0.70710678, 0., 0., 0.70710678);
 
     btQuaternion q_rot;
+    btVector3 pos;
     switch(corrdinate_system) {
       case optitrack: {
         // optitrak <-- funky <-- object
@@ -112,10 +113,12 @@ void VRPN_CALLBACK track_target (void *, const vrpn_TRACKERCB t)
         // for roll pitch yaw, there is still a rotation that aligns the
         // object frame with the /optitrak frame (and not /optitrak_funky)
         q_rot = q_fix * q_orig * q_fix.inverse();
+        pos = btVector3(t.pos[0], -t.pos[2], t.pos[1]);
         break;
       }
       case vicon: {
         q_rot = q_orig;  //TODO(gohlp) verify this
+        pos = btVector3(t.pos[0], t.pos[1], t.pos[2]);
         break;
       }
       default: {
@@ -123,11 +126,6 @@ void VRPN_CALLBACK track_target (void *, const vrpn_TRACKERCB t)
         break;
       }
     }
-
-    //btScalar ang = q_rot.getAngle();
-    btVector3 axis = q_rot.getAxis();
-    btVector3 pos(t.pos[0], -t.pos[2], t.pos[1]);
-    //btVector3 new_pos = pos.rotate(axis, ang);
 
     // verifying that each callback indeed gives fresh data.
     if ( prev_vrpn_data.quat[0] == t.quat[0] and \

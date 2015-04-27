@@ -129,7 +129,18 @@ void VRPN_CALLBACK track_target(void *, const vrpn_TRACKERCB t) {
   prev_vrpn_data = t;
 
   const int kMicroSecToNanoSec = 1000;
-  ros::Time timestamp = ros::Time(t.msg_time.tv_sec, t.msg_time.tv_usec * kMicroSecToNanoSec);
+
+  // Somehow the vrpn msgs are in a different time zone.
+  ros::Time timestamp_local = ros::Time::now();
+  int timediff_sec = std::round(double(timestamp_local.sec - t.msg_time.tv_sec) / 3600) * 3600;
+
+  int timestamp_nsec = t.msg_time.tv_usec * kMicroSecToNanoSec;
+  ros::Time timestamp = ros::Time(t.msg_time.tv_sec + timediff_sec, timestamp_nsec);
+
+  ros::Duration time_diff = ros::Time::now() - timestamp;
+  if(std::abs(time_diff.toSec()) > 0.1) {
+    ROS_WARN_STREAM_THROTTLE(1, "Time delay: " << time_diff);
+  }
 
   target_state->target.transform.translation.x = pos.x();
   target_state->target.transform.translation.y = pos.y();

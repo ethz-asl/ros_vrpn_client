@@ -54,6 +54,12 @@ class TargetState{
 
 TargetState *target_state;
 std::string frame_id;
+std::string corrdinate_system_string;
+
+enum CoordinateSystem {
+  vicon,
+  optitrack
+} corrdinate_system;
 
 // set to true in the VRPN callback function.
 bool fresh_data = false;
@@ -98,16 +104,28 @@ void VRPN_CALLBACK track_target (void *, const vrpn_TRACKERCB t)
     btQuaternion q_orig(t.quat[0], t.quat[1], t.quat[2], t.quat[3]);
     btQuaternion q_fix(0.70710678, 0., 0., 0.70710678);
 
-    // optitrak <-- funky <-- object
-    // the q_fix.inverse() esures that when optitrak_funky says 0 0 0
-    // for roll pitch yaw, there is still a rotation that aligns the
-    // object frame with the /optitrak frame (and not /optitrak_funky)
-    btQuaternion q_rot = q_fix * q_orig * q_fix.inverse();
-
-    //btScalar ang = q_rot.getAngle();
-    btVector3 axis = q_rot.getAxis();
-    btVector3 pos(t.pos[0], -t.pos[2], t.pos[1]);
-    //btVector3 new_pos = pos.rotate(axis, ang);
+    btQuaternion q_rot;
+    btVector3 pos;
+    switch(corrdinate_system) {
+      case optitrack: {
+        // optitrak <-- funky <-- object
+        // the q_fix.inverse() esures that when optitrak_funky says 0 0 0
+        // for roll pitch yaw, there is still a rotation that aligns the
+        // object frame with the /optitrak frame (and not /optitrak_funky)
+        q_rot = q_fix * q_orig * q_fix.inverse();
+        pos = btVector3(t.pos[0], -t.pos[2], t.pos[1]);
+        break;
+      }
+      case vicon: {
+        q_rot = q_orig;
+        pos = btVector3(t.pos[0], t.pos[1], t.pos[2]);
+        break;
+      }
+      default: {
+        ROS_FATAL("Coordinate system not defined!");
+        break;
+      }
+    }
 
     // verifying that each callback indeed gives fresh data.
     if ( prev_vrpn_data.quat[0] == t.quat[0] and \
@@ -130,7 +148,7 @@ void VRPN_CALLBACK track_target (void *, const vrpn_TRACKERCB t)
     target_state->target.transform.rotation.z = q_rot.z();
     target_state->target.transform.rotation.w = q_rot.w();
 
-    target_state->target.header.frame_id = "optitrak";
+    target_state->target.header.frame_id = corrdinate_system_string;
     target_state->target.child_frame_id = frame_id;
     target_state->target.header.stamp = ros::Time::now();
 
@@ -154,13 +172,24 @@ int main(int argc, char* argv[])
 
     nh.param<std::string>("vrpn_server_ip", vrpn_server_ip, std::string());
     nh.param<int>("vrpn_port", vrpn_port, 3883);
+    nh.param<std::string>("vrpn_coordinate_system", corrdinate_system_string, "vicon");
+
 
     std::cout<<"vrpn_server_ip:"<<vrpn_server_ip<<std::endl;
     std::cout<<"vrpn_port:"<<vrpn_port<<std::endl;
+    std::cout << "vrpn_coordinate_system:" << corrdinate_system_string << std::endl;
+
+    if(corrdinate_system_string == std::string("vicon")) {
+
+    } else if(corrdinate_system_string == std::string("optitrack")) {
+
+    } else {
+      ROS_FATAL("ROS param vrpn_coordinate_system should be either 'vicon' or 'optitrack'!");
+    }
 
     Rigid_Body tool(nh, vrpn_server_ip, vrpn_port);
 
-    ros::Rate loop_rate(1000);
+    ros::Rate loop_rate(1000); //TODO(gohlp): fix this
 
     while(ros::ok())
     {

@@ -117,7 +117,7 @@ void VRPN_CALLBACK track_target (void *, const vrpn_TRACKERCB t)
         break;
       }
       case vicon: {
-        q_rot = q_orig;  //TODO(gohlp) verify this
+        q_rot = q_orig;
         pos = btVector3(t.pos[0], t.pos[1], t.pos[2]);
         break;
       }

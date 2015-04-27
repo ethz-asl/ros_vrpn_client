@@ -128,6 +128,9 @@ void VRPN_CALLBACK track_target(void *, const vrpn_TRACKERCB t) {
 
   prev_vrpn_data = t;
 
+  const int kMicroSecToNanoSec = 1000;
+  ros::Time timestamp = ros::Time(t.msg_time.tv_sec, t.msg_time.tv_usec * kMicroSecToNanoSec);
+
   target_state->target.transform.translation.x = pos.x();
   target_state->target.transform.translation.y = pos.y();
   target_state->target.transform.translation.z = pos.z();
@@ -139,13 +142,13 @@ void VRPN_CALLBACK track_target(void *, const vrpn_TRACKERCB t) {
 
   target_state->target.header.frame_id = corrdinate_system_string;
   target_state->target.child_frame_id = frame_id;
-  target_state->target.header.stamp = ros::Time::now();
+  target_state->target.header.stamp = timestamp;
 
   fresh_data = true;
 }
 
 int main(int argc, char* argv[]) {
-  ros::init(argc, argv, "vrpn_tracked_object_1");
+  ros::init(argc, argv, "ros_vrpn_client");
   ros::NodeHandle nh("~");
 
   target_state = new TargetState;

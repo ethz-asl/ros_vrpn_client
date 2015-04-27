@@ -54,6 +54,10 @@ class TargetState{
 
 TargetState *target_state;
 std::string frame_id;
+enum CoordinateSystem {
+  vicon,
+  optitrack
+} corrdinate_system_;
 
 // set to true in the VRPN callback function.
 bool fresh_data = false;
@@ -98,11 +102,25 @@ void VRPN_CALLBACK track_target (void *, const vrpn_TRACKERCB t)
     btQuaternion q_orig(t.quat[0], t.quat[1], t.quat[2], t.quat[3]);
     btQuaternion q_fix(0.70710678, 0., 0., 0.70710678);
 
-    // optitrak <-- funky <-- object
-    // the q_fix.inverse() esures that when optitrak_funky says 0 0 0
-    // for roll pitch yaw, there is still a rotation that aligns the
-    // object frame with the /optitrak frame (and not /optitrak_funky)
-    btQuaternion q_rot = q_fix * q_orig * q_fix.inverse();
+    btQuaternion q_rot;
+    switch(corrdinate_system_) {
+      case optitrack: {
+        // optitrak <-- funky <-- object
+        // the q_fix.inverse() esures that when optitrak_funky says 0 0 0
+        // for roll pitch yaw, there is still a rotation that aligns the
+        // object frame with the /optitrak frame (and not /optitrak_funky)
+        q_rot = q_fix * q_orig * q_fix.inverse();
+        break;
+      }
+      case vicon: {
+        q_rot = q_orig;  //TODO(gohlp) verify this
+        break;
+      }
+      default: {
+        ROS_FATAL("Coordinate system not defined!");
+        break;
+      }
+    }
 
     //btScalar ang = q_rot.getAngle();
     btVector3 axis = q_rot.getAxis();
@@ -151,12 +169,24 @@ int main(int argc, char* argv[])
     std::string vrpn_server_ip;
     int vrpn_port;
     std::string tracked_object_name;
+    std::string corrdinate_system_string;
 
     nh.param<std::string>("vrpn_server_ip", vrpn_server_ip, std::string());
     nh.param<int>("vrpn_port", vrpn_port, 3883);
+    nh.param<std::string>("vrpn_coordinate_system", corrdinate_system_string, "vicon");
+
 
     std::cout<<"vrpn_server_ip:"<<vrpn_server_ip<<std::endl;
     std::cout<<"vrpn_port:"<<vrpn_port<<std::endl;
+    std::cout << "vrpn_coordinate_system:" << corrdinate_system_string << std::endl;
+
+    if(corrdinate_system_string == std::string("vicon")) {
+
+    } else if(corrdinate_system_string == std::string("optitrack")) {
+
+    } else {
+      ROS_FATAL("ROS param vrpn_coordinate_system should be eader 'vicon' or 'optitrack'!");
+    }
 
     Rigid_Body tool(nh, vrpn_server_ip, vrpn_port);
 

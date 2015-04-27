@@ -54,10 +54,12 @@ class TargetState{
 
 TargetState *target_state;
 std::string frame_id;
+std::string corrdinate_system_string;
+
 enum CoordinateSystem {
   vicon,
   optitrack
-} corrdinate_system_;
+} corrdinate_system;
 
 // set to true in the VRPN callback function.
 bool fresh_data = false;
@@ -103,7 +105,7 @@ void VRPN_CALLBACK track_target (void *, const vrpn_TRACKERCB t)
     btQuaternion q_fix(0.70710678, 0., 0., 0.70710678);
 
     btQuaternion q_rot;
-    switch(corrdinate_system_) {
+    switch(corrdinate_system) {
       case optitrack: {
         // optitrak <-- funky <-- object
         // the q_fix.inverse() esures that when optitrak_funky says 0 0 0
@@ -148,7 +150,7 @@ void VRPN_CALLBACK track_target (void *, const vrpn_TRACKERCB t)
     target_state->target.transform.rotation.z = q_rot.z();
     target_state->target.transform.rotation.w = q_rot.w();
 
-    target_state->target.header.frame_id = "optitrak";
+    target_state->target.header.frame_id = corrdinate_system_string;
     target_state->target.child_frame_id = frame_id;
     target_state->target.header.stamp = ros::Time::now();
 
@@ -169,7 +171,6 @@ int main(int argc, char* argv[])
     std::string vrpn_server_ip;
     int vrpn_port;
     std::string tracked_object_name;
-    std::string corrdinate_system_string;
 
     nh.param<std::string>("vrpn_server_ip", vrpn_server_ip, std::string());
     nh.param<int>("vrpn_port", vrpn_port, 3883);
@@ -185,12 +186,12 @@ int main(int argc, char* argv[])
     } else if(corrdinate_system_string == std::string("optitrack")) {
 
     } else {
-      ROS_FATAL("ROS param vrpn_coordinate_system should be eader 'vicon' or 'optitrack'!");
+      ROS_FATAL("ROS param vrpn_coordinate_system should be either 'vicon' or 'optitrack'!");
     }
 
     Rigid_Body tool(nh, vrpn_server_ip, vrpn_port);
 
-    ros::Rate loop_rate(1000);
+    ros::Rate loop_rate(1000); //TODO(gohlp): fix this
 
     while(ros::ok())
     {

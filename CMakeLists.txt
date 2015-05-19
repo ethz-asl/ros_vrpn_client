@@ -9,6 +9,8 @@ find_package(Bullet REQUIRED)
 
 include_directories(${BULLET_INCLUDE_DIR})
 
+add_definitions(-std=c++11)
+
 cs_add_executable(ros_vrpn_client 
 	src/ros_vrpn_client.cpp
 )

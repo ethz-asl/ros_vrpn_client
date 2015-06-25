@@ -21,5 +21,6 @@
   <depend>tf</depend>
   <depend>geometry_msgs</depend>
   <depend>vrpn_catkin</depend>
+  <depend>cmake_modules</depend>
 
 </package>

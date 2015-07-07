@@ -43,7 +43,7 @@
 #include <vrpn_Connection.h>
 #include <vrpn_Tracker.h>
 
-#include <LinearMath/btQuaternion.h>
+#include <Eigen/Geometry>
 
 void VRPN_CALLBACK track_target(void *, const vrpn_TRACKERCB t);
 //void VRPN_CALLBACK track_target_velocity(void *, const vrpn_TRACKERVELCB tv);
@@ -122,11 +122,11 @@ class Rigid_Body {
 
 //== Tracker Position/Orientation Callback ==--
 void VRPN_CALLBACK track_target(void *, const vrpn_TRACKERCB t) {
-  btQuaternion q_orig(t.quat[0], t.quat[1], t.quat[2], t.quat[3]);
-  btQuaternion q_fix(0.70710678, 0., 0., 0.70710678);
+  Eigen::Quaterniond q_orig(t.quat[3], t.quat[0], t.quat[1], t.quat[2]);
+  Eigen::Quaterniond q_fix(0.70710678, 0.70710678, 0., 0.);
 
-  btQuaternion q_rot;
-  btVector3 pos;
+  Eigen::Quaterniond q_rot;
+  Eigen::Vector3d pos;
   switch (corrdinate_system) {
     case optitrack: {
       // optitrak <-- funky <-- object
@@ -134,12 +134,12 @@ void VRPN_CALLBACK track_target(void *, const vrpn_TRACKERCB t) {
       // for roll pitch yaw, there is still a rotation that aligns the
       // object frame with the /optitrak frame (and not /optitrak_funky)
       q_rot = q_fix * q_orig * q_fix.inverse();
-      pos = btVector3(t.pos[0], -t.pos[2], t.pos[1]);
+      pos = Eigen::Vector3d(t.pos[0], -t.pos[2], t.pos[1]);
       break;
     }
     case vicon: {
       q_rot = q_orig;
-      pos = btVector3(t.pos[0], t.pos[1], t.pos[2]);
+      pos = Eigen::Vector3d(t.pos[0], t.pos[1], t.pos[2]);
       break;
     }
     default: {

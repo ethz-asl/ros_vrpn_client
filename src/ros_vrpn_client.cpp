@@ -41,7 +41,7 @@
 #include <math.h>
 
 #include <vrpn_Connection.h>
-#include <vrpn_Tracker.h> 
+#include <vrpn_Tracker.h>
 
 #include <LinearMath/btQuaternion.h>
 
@@ -81,6 +81,7 @@ class Rigid_Body {
  public:
   Rigid_Body(ros::NodeHandle& nh, std::string server_ip, int port) {
     target_pub = nh.advertise<geometry_msgs::TransformStamped>("pose", 100);
+    odometry_pub = nh.advertise<nav_msgs::Odometry>("odometry", 100);
     std::string connec_nm = server_ip + ":" + boost::lexical_cast<std::string>(port);
     connection = vrpn_get_connection_by_name(connec_nm.c_str());
     std::string target_name = nh.getNamespace().substr(1);
@@ -244,4 +245,3 @@ int main(int argc, char* argv[]) {
   }
   return 0;
 }
-

@@ -45,6 +45,8 @@
 
 #include <Eigen/Geometry>
 
+#include "vicon_odometry_estimator.h"
+
 void VRPN_CALLBACK track_target(void *, const vrpn_TRACKERCB t);
 //void VRPN_CALLBACK track_target_velocity(void *, const vrpn_TRACKERVELCB tv);
 //void VRPN_CALLBACK track_target_acceleration(void *, const vrpn_TRACKERACCCB ta);
@@ -70,87 +72,9 @@ bool fresh_data = false;
 vrpn_TRACKERCB prev_vrpn_data;
 //vrpn_TRACKERVELCB prev_vrpn_velocity_data;
 
-class TranslationalEstimator {
- private:
-  Eigen::Vector3d pos_hat ;
-  Eigen::Vector3d vel_hat ;
-  double dt;
-  double kp;
-  double kv;
- public:
-  TranslationalEstimator(ros::NodeHandle& nh) :
-   pos_hat(0, 0, 0), //TODO(millanes): Should initialize to first vicon measurement
-   vel_hat(0, 0, 0),
-   dt(0.01) {
-    // Getting estimator parameters
-    nh.param<double>("tranEst_kp", kp, 1.0);
-    nh.param<double>("tranEst_kv", kv, 10.0);
-  }
+// Pointer to the vicon estimator
+vicon_estimation::ViconOdometryEstimator* pViconOdometryEstimator =  NULL;
 
-  void updateEstimate(Eigen::Vector3d pos_measured) {
-    // Constructing the full state
-    Eigen::Matrix<double, 6, 1> x_hat;
-    x_hat << pos_hat, vel_hat;
-    // Constructing the system matrix
-    Eigen::Matrix<double, 6, 6> A;
-    A.setZero();
-    A.block<3,3>(0, 0) = Eigen::Matrix3d::Identity();
-    A.block<3,3>(3, 3) = Eigen::Matrix3d::Identity();
-    A.block<3,3>(0, 3) = dt*Eigen::Matrix3d::Identity();
-    // Constructing the measurement matrix
-    Eigen::Matrix<double, 3, 6> C;
-    C.setZero();
-    C.block<3,3>(0, 0) = Eigen::Matrix3d::Identity();
-    // Constructing the luenberger gain matrix
-    Eigen::Matrix<double, 6, 3> L_gain;
-    L_gain << kp*Eigen::Matrix3d::Identity(), kv*Eigen::Matrix3d::Identity();
-    // Correction using the luenberger equations + gain
-    x_hat = (A-L_gain*C*A)*x_hat + L_gain*pos_measured ;
-    // Extracting state components
-    pos_hat = x_hat.block<3,1>(0, 0) ;
-    vel_hat = x_hat.block<3,1>(3, 0) ;
-  }
-
-  Eigen::Vector3d getEstimatedPosition() {
-    return pos_hat ;
-  }  
-
-  Eigen::Vector3d getEstimatedVelocity() {
-    return vel_hat ;
-  }  
-
-};
-
-TranslationalEstimator* pTranslationalEstimator =  NULL;
-
-class RotationalEstimator {
- private:
-  Eigen::Vector4d quat_hat ;
-  Eigen::Vector3d omega_hat ;
-  double dt;
- public:
-  RotationalEstimator(ros::NodeHandle& nh) :
-   quat_hat(0, 0, 0, 0), //TODO(millanes): Should initialize to first vicon measurement
-   omega_hat(0, 0, 0),
-   dt(0.01) {
-
-  }
-
-  void updateEstimate(Eigen::Vector3d pos_measured) {
-
-  }
-
-  Eigen::Vector4d getEstimatedOrientation() {
-    return quat_hat ;
-  }  
-
-  Eigen::Vector3d getEstimatedAngularVelocity() {
-    return omega_hat ;
-  }  
-
-};
-
-RotationalEstimator* pRotationalEstimator =  NULL;
 
 class Rigid_Body {
  private:
@@ -257,27 +181,16 @@ void VRPN_CALLBACK track_target(void *, const vrpn_TRACKERCB t) {
     ROS_WARN_STREAM_THROTTLE(1, "Time delay: " << time_diff.toSec());
   }
 
-  // Checking estimators initialized
-  if(pTranslationalEstimator) {
-    // Updating and getting the estimates
-    pTranslationalEstimator->updateEstimate(pos);
-    Eigen::Vector3d pos_hat = pTranslationalEstimator->getEstimatedPosition();
-    Eigen::Vector3d vel_hat = pTranslationalEstimator->getEstimatedVelocity();
-    //std::cout << "pos_raw: " << std::endl << pos << std::endl ;
-    std::cout << "pos_hat: " << std::endl << pos_hat << std::endl ;
-    std::cout << "vel_hat: " << std::endl << vel_hat << std::endl ;
-  }
-
-  // Checking estimators initialized
-  if(pRotationalEstimator) {
-    // Updating and getting the estimates
-    pTranslationalEstimator->updateEstimate(pos);
-    Eigen::Vector4d quat_hat = pRotationalEstimator->getEstimatedOrientation();
-    Eigen::Vector3d omega_hat = pRotationalEstimator->getEstimatedAngularVelocity();
-    //std::cout << "quat_raw: " << std::endl << q_rot << std::endl ;
-    std::cout << "quat_hat: " << std::endl << quat_hat << std::endl ;
-    std::cout << "omega_hat: " << std::endl << omega_hat << std::endl ;
-  }
+  // Updating the estimates with the new measurements
+  pViconOdometryEstimator->updateEstimate(pos, q_rot);
+  Eigen::Vector3d pos_hat = pViconOdometryEstimator->getEstimatedPosition();
+  Eigen::Vector3d vel_hat = pViconOdometryEstimator->getEstimatedVelocity();
+  Eigen::Quaterniond quat_hat = pViconOdometryEstimator->getEstimatedOrientation();
+  Eigen::Vector3d omega_hat = pViconOdometryEstimator->getEstimatedAngularVelocity();
+  //std::cout << "pos_hat: " << std::endl << pos_hat << std::endl ;
+  //std::cout << "vel_hat: " << std::endl << vel_hat << std::endl ;
+  //std::cout << "quat_hat: " << std::endl << quat_hat << std::endl ;
+  //std::cout << "omega_hat: " << std::endl << omega_hat << std::endl ;
 
   // Populating topic contents. Published in main loop
   target_state->target.transform.translation.x = pos.x();
@@ -304,10 +217,23 @@ void VRPN_CALLBACK track_target(void *, const vrpn_TRACKERCB t) {
   target_state->odometry.pose.pose.orientation.x = q_rot.x();
   target_state->odometry.pose.pose.orientation.y = q_rot.y();
   target_state->odometry.pose.pose.orientation.z = q_rot.z();
-//  target_state->odometry.twist
+  target_state->odometry.twist.twist.linear.x = vel_hat.x() ;
+  target_state->odometry.twist.twist.linear.y = vel_hat.y() ;
+  target_state->odometry.twist.twist.linear.z = vel_hat.z() ;
+  target_state->odometry.twist.twist.angular.x = omega_hat.x() ;
+  target_state->odometry.twist.twist.angular.y = omega_hat.y() ;
+  target_state->odometry.twist.twist.angular.z = omega_hat.z() ;
 
   fresh_data = true;
 }
+
+
+void initializeEstimatorParameters(ros::NodeHandle nh) {
+  // Setting estimator parameters with values from the parameter server
+  nh.getParam("tranEst_kp", pViconOdometryEstimator->translationalEstimator.estimator_parameters_.kp);
+  nh.getParam("tranEst_kv", pViconOdometryEstimator->translationalEstimator.estimator_parameters_.kv);
+}
+
 
 int main(int argc, char* argv[]) {
   ros::init(argc, argv, "ros_vrpn_client");
@@ -337,13 +263,13 @@ int main(int argc, char* argv[]) {
     ROS_FATAL("ROS param vrpn_coordinate_system should be either 'vicon' or 'optitrack'!");
   }
 
-  Rigid_Body tool(nh, vrpn_server_ip, vrpn_port);
+  // Creating the vicon estimator
+  vicon_estimation::ViconOdometryEstimator viconOdometryEstimator;
+  pViconOdometryEstimator = &viconOdometryEstimator;
+  initializeEstimatorParameters(nh);
 
-  // Creating estimators
-  TranslationalEstimator translationalEstimator(nh);
-  pTranslationalEstimator = &translationalEstimator;
-  RotationalEstimator rotationalEstimator(nh);
-  pRotationalEstimator = &rotationalEstimator;
+  // Creating object which handles data publishing
+  Rigid_Body tool(nh, vrpn_server_ip, vrpn_port);
 
   ros::Rate loop_rate(1000);  //TODO(gohlp): fix this
 

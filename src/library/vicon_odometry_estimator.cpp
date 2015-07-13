@@ -15,29 +15,29 @@ ViconOdometryEstimator::ViconOdometryEstimator() :
   //std::cout << "Initializing ViconOdometryEstimator" << std::endl;
 }
 
-void ViconOdometryEstimator::updateEstimate(Eigen::Vector3d pos_measured, Eigen::Quaterniond quat_measured)
+void ViconOdometryEstimator::updateEstimate(const Eigen::Vector3d& pos_measured, const Eigen::Quaterniond& quat_measured)
 {
 	// Updating the translational and rotation sub-estimates
 	translationalEstimator.updateEstimate(pos_measured);
 	rotationalEstimator.updateEstimate(quat_measured);
 }
 
-Eigen::Vector3d ViconOdometryEstimator::getEstimatedPosition()
+Eigen::Vector3d ViconOdometryEstimator::getEstimatedPosition() const
 {
 	return translationalEstimator.getEstimatedPosition();
 }
 
-Eigen::Vector3d ViconOdometryEstimator::getEstimatedVelocity()
+Eigen::Vector3d ViconOdometryEstimator::getEstimatedVelocity() const
 {
 	return translationalEstimator.getEstimatedVelocity();
 }
 
-Eigen::Quaterniond ViconOdometryEstimator::getEstimatedOrientation()
+Eigen::Quaterniond ViconOdometryEstimator::getEstimatedOrientation() const
 {
 	return rotationalEstimator.getEstimatedOrientation();
 }
 
-Eigen::Vector3d ViconOdometryEstimator::getEstimatedAngularVelocity()
+Eigen::Vector3d ViconOdometryEstimator::getEstimatedAngularVelocity() const
 {
 	return rotationalEstimator.getEstimatedAngularVelocity();
 }
@@ -57,7 +57,7 @@ TranslationalEstimator::TranslationalEstimator() :
   //std::cout << "Initializing TranslationalEstimator" << std::endl;
 }
 
-void TranslationalEstimator::updateEstimate(Eigen::Vector3d pos_measured)
+void TranslationalEstimator::updateEstimate(const Eigen::Vector3d& pos_measured)
 {
 	//std::cout << "Updating translational estimate" << std::endl;
   // Constructing the full state
@@ -83,11 +83,11 @@ void TranslationalEstimator::updateEstimate(Eigen::Vector3d pos_measured)
   vel_hat = x_hat.block<3,1>(3, 0) ;
 }
 
-Eigen::Vector3d TranslationalEstimator::getEstimatedPosition() {
+Eigen::Vector3d TranslationalEstimator::getEstimatedPosition() const {
   return pos_hat ;
 }  
 
-Eigen::Vector3d TranslationalEstimator::getEstimatedVelocity() {
+Eigen::Vector3d TranslationalEstimator::getEstimatedVelocity() const {
   return vel_hat ;
 }  
 
@@ -105,16 +105,19 @@ RotationalEstimator::RotationalEstimator() :
   //std::cout << "Initializing RotationalEstimator" << std::endl;
 }
 
-void RotationalEstimator::updateEstimate(Eigen::Quaterniond quat_measured)
+void RotationalEstimator::updateEstimate(const Eigen::Quaterniond& quat_measured)
 {
 	//std::cout << "Updating rotational estimate" << std::endl;
+	// Propagating the estimate
+
+
 }
 
-Eigen::Quaterniond RotationalEstimator::getEstimatedOrientation() {
+Eigen::Quaterniond RotationalEstimator::getEstimatedOrientation() const {
   return quat_hat ;
 }  
 
-Eigen::Vector3d RotationalEstimator::getEstimatedAngularVelocity() {
+Eigen::Vector3d RotationalEstimator::getEstimatedAngularVelocity() const {
   return omega_hat ;
 }  
 

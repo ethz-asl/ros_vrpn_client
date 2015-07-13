@@ -56,11 +56,11 @@ class TranslationalEstimator {
     // Constructor
     TranslationalEstimator();
     // Update estimated quantities with new measurement
-    void updateEstimate(Eigen::Vector3d pos_measured);
+    void updateEstimate(const Eigen::Vector3d& pos_measured);
     // Return estimated position
-    Eigen::Vector3d getEstimatedPosition();
+    Eigen::Vector3d getEstimatedPosition() const;
     // Return estimated velocity
-    Eigen::Vector3d getEstimatedVelocity();
+    Eigen::Vector3d getEstimatedVelocity() const;
 
     // Estimator parameters
     TranslationalEstimatorParameters estimator_parameters_;
@@ -92,11 +92,11 @@ class RotationalEstimator {
     // Constructor
     RotationalEstimator();
     // Update estimated quantities with new measurement
-    void updateEstimate(Eigen::Quaterniond quat_measured);
+    void updateEstimate(const Eigen::Quaterniond& quat_measured);
     // Return estimated orientation
-    Eigen::Quaterniond getEstimatedOrientation();
+    Eigen::Quaterniond getEstimatedOrientation() const;
     // Return estimated angular velocity
-    Eigen::Vector3d getEstimatedAngularVelocity();
+    Eigen::Vector3d getEstimatedAngularVelocity() const;
 
     // Estimator parameters
     RotationalEstimatorParameters estimator_parameters_;
@@ -113,13 +113,13 @@ class ViconOdometryEstimator{
     ViconOdometryEstimator();
 
     // Update estimated quantities with new measurement
-    void updateEstimate(Eigen::Vector3d pos_measured, Eigen::Quaterniond quat_measured);
+    void updateEstimate(const Eigen::Vector3d& pos_measured, const Eigen::Quaterniond& quat_measured);
 
     // Functions providing access to the various estimates
-    Eigen::Vector3d getEstimatedPosition();
-  	Eigen::Vector3d getEstimatedVelocity();
-  	Eigen::Quaterniond getEstimatedOrientation();
-  	Eigen::Vector3d getEstimatedAngularVelocity();
+    Eigen::Vector3d getEstimatedPosition() const;
+  	Eigen::Vector3d getEstimatedVelocity() const;
+  	Eigen::Quaterniond getEstimatedOrientation() const;
+  	Eigen::Vector3d getEstimatedAngularVelocity() const;
 
     TranslationalEstimator translationalEstimator;
     RotationalEstimator rotationalEstimator;

@@ -73,16 +73,31 @@ class TranslationalEstimator {
 };
 
 // The parameter class for the translational estimator and parameter default values
-static const double dtRotationalDefault = 0.01 ;
+static const double dtRotationalDefault = 0.01;
+static const double dQuat_hat_initialCovarianceDefault = 1;
+static const double dOmega_hat_initialCovarianceDefault = 1;
+static const double dQuat_processCovarianceDefault = 1;
+static const double dOmega_processCovarianceDefault = 1;
+static const double quat_measurementCovarianceDefault = 1;
 class RotationalEstimatorParameters {
 
   public:
   	// Constructor
     RotationalEstimatorParameters() :
-      dt(dtRotationalDefault)
+      dt(dtRotationalDefault),
+      dQuat_hat_initialCovariance(dQuat_hat_initialCovarianceDefault),
+	  	dOmega_hat_initialCovariance(dOmega_hat_initialCovarianceDefault),
+	  	dQuat_processCovariance(dQuat_processCovarianceDefault),
+	  	dOmega_processCovariance(dOmega_processCovarianceDefault),
+	  	quat_measurementCovariance(quat_measurementCovarianceDefault)
     { };
 
 	  double dt;
+	  double dQuat_hat_initialCovariance;
+	  double dOmega_hat_initialCovariance;
+	  double dQuat_processCovariance;
+	  double dOmega_processCovariance;
+	  double quat_measurementCovariance;
 };
 
 // Estimated object orientation and roll rates from vicon data
@@ -102,9 +117,26 @@ class RotationalEstimator {
     RotationalEstimatorParameters estimator_parameters_;
 
   private:
-    Eigen::Quaterniond quat_hat ;
-    Eigen::Vector3d omega_hat ;
+  	// Global estimates
+    Eigen::Quaterniond quat_hat;
+    Eigen::Vector3d omega_hat;
+    // Error estimates
+    Eigen::Vector3d dQuat_hat;
+    Eigen::Vector3d dOmega_hat;
+    // Covariance Estimates
+    Eigen::Matrix<double, 6, 6> covariance;
+    Eigen::Matrix<double, 6, 6> processCovariance;
+    Eigen::Matrix<double, 4, 4> measurementCovariance;
 
+    // Function to generate a skew symmetric matrix from a vector
+  	Eigen::Matrix3d skewMatrix(const Eigen::Vector3d& vec ) const;
+    //
+    void updateEstimate_propagateGlobalEstimate(Eigen::Matrix<double, 7, 1>* x_p, const Eigen::Matrix<double, 7, 1>& x_old);
+    void updateEstimate_propagateErrorEstimate(Eigen::Matrix<double, 6, 1>* dx_p, const Eigen::Matrix<double, 6, 1>& dx_old, const Eigen::Matrix<double, 7, 1>& x_old);
+    void updateEstimate_propagateErrorCovariance(Eigen::Matrix<double, 6, 6>* P_p, Eigen::Matrix<double, 6, 6>& P_old, const Eigen::Matrix<double, 7, 1>& x_old);
+    void updateEstimate_updateErrorEstimate(Eigen::Matrix<double, 6, 1>* dx_m, Eigen::Matrix<double, 6, 6>* P_m, const Eigen::Quaterniond& quat_measured,
+                                            const Eigen::Matrix<double, 7, 1>& x_p, const Eigen::Matrix<double, 6, 1>& dx_p, const Eigen::Matrix<double, 6,6>& P_p);
+    void updateEstimate_recombineErrorGlobal(Eigen::Matrix<double, 7, 1>* x_m, Eigen::Matrix<double, 6, 1>* dx_m, const Eigen::Matrix<double, 7, 1> x_p);
 };
 
 class ViconOdometryEstimator{

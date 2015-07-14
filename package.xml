@@ -14,14 +14,22 @@
   <maintainer email="pascal.gohl@mavt.ethz.ch">Pascal Gohl</maintainer>
   <license>New BSD</license>
 
+  <!-- Dependencies which this package needs to build itself. -->
   <buildtool_depend>catkin</buildtool_depend>
   <buildtool_depend>catkin_simple</buildtool_depend>
-  
+
+  <!-- Dependencies needed to compile this package. -->
+  <buildtool_depend>message_generation</buildtool_depend>
+
+
+  <!-- Dependencies needed after this package is compiled. -->  
   <depend>roscpp</depend>
   <depend>tf</depend>
   <depend>geometry_msgs</depend>
   <depend>nav_msgs</depend>
   <depend>vrpn_catkin</depend>
   <depend>cmake_modules</depend>
+  <depend>message_runtime</depend>
+
 
 </package>

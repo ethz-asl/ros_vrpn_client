@@ -1,7 +1,8 @@
 
-#include "vicon_odometry_estimator.h"
+//#include "vicon_estimation/vicon_estimator.h"
+#include "vicon_estimator.h"
 
-namespace vicon_estimation {
+//namespace vicon_estimation {
 
 /*
 * --------------------------------------------------------------------
@@ -9,43 +10,43 @@ namespace vicon_estimation {
 * --------------------------------------------------------------------
 */
 
-ViconOdometryEstimator::ViconOdometryEstimator() : //ros::NodeHandle& nh
+ViconEstimator::ViconEstimator() : //ros::NodeHandle& nh
   translationalEstimator(),
   rotationalEstimator() {
-  //std::cout << "Initializing ViconOdometryEstimator" << std::endl;
+  //std::cout << "Initializing ViconEstimator" << std::endl;
 }
 
-void ViconOdometryEstimator::updateEstimate(const Eigen::Vector3d& pos_measured, const Eigen::Quaterniond& quat_measured)
+void ViconEstimator::updateEstimate(const Eigen::Vector3d& pos_measured, const Eigen::Quaterniond& quat_measured)
 {
 	// Updating the translational and rotation sub-estimates
 	translationalEstimator.updateEstimate(pos_measured);
 	rotationalEstimator.updateEstimate(quat_measured);
 }
 
-void ViconOdometryEstimator::reset()
+void ViconEstimator::reset()
 {
-	// Updating the translational and rotation sub-estimates
-	//translationalEstimator.updateEstimate(pos_measured);
+	// Resetting the translational and rotation
+	//translationalEstimator.reset;
 	rotationalEstimator.reset();
 }
 
 
-Eigen::Vector3d ViconOdometryEstimator::getEstimatedPosition() const
+Eigen::Vector3d ViconEstimator::getEstimatedPosition() const
 {
 	return translationalEstimator.getEstimatedPosition();
 }
 
-Eigen::Vector3d ViconOdometryEstimator::getEstimatedVelocity() const
+Eigen::Vector3d ViconEstimator::getEstimatedVelocity() const
 {
 	return translationalEstimator.getEstimatedVelocity();
 }
 
-Eigen::Quaterniond ViconOdometryEstimator::getEstimatedOrientation() const
+Eigen::Quaterniond ViconEstimator::getEstimatedOrientation() const
 {
 	return rotationalEstimator.getEstimatedOrientation();
 }
 
-Eigen::Vector3d ViconOdometryEstimator::getEstimatedAngularVelocity() const
+Eigen::Vector3d ViconEstimator::getEstimatedAngularVelocity() const
 {
 	return rotationalEstimator.getEstimatedAngularVelocity();
 }
@@ -122,8 +123,6 @@ RotationalEstimator::RotationalEstimator() : //ros::NodeHandle& nh
 	processCovariance << 	estimator_parameters_.dQuat_processCovariance*Eigen::Matrix3d::Identity(), Eigen::Matrix3d::Zero(),
 												Eigen::Matrix3d::Zero(), estimator_parameters_.dOmega_processCovariance*Eigen::Matrix3d::Identity() ;
 	measurementCovariance << 	estimator_parameters_.quat_measurementCovariance*Eigen::Matrix4d::Identity() ;
-	// Creating publisher for intermediate estimator values
-  //publisher = nh.advertise<ros_vrpn_client::rotationalEstimator>("rotationalEstimator", 100);
 }
 
 void RotationalEstimator::reset()
@@ -132,30 +131,23 @@ void RotationalEstimator::reset()
   omega_hat = Eigen::Matrix<double, 3, 1>::Zero() ;
   dQuat_hat = Eigen::Matrix<double, 3, 1>::Zero() ;
   dOmega_hat = Eigen::Matrix<double, 3, 1>::Zero() ;
+  // Reseting to initial covariance
 	covariance << estimator_parameters_.dQuat_hat_initialCovariance*Eigen::Matrix3d::Identity(), Eigen::Matrix3d::Zero(),
 							Eigen::Matrix3d::Zero(), estimator_parameters_.dOmega_hat_initialCovariance*Eigen::Matrix3d::Identity() ;
+	// Constructing process and measurement covariance matrices
+	processCovariance << 	estimator_parameters_.dQuat_processCovariance*Eigen::Matrix3d::Identity(), Eigen::Matrix3d::Zero(),
+												Eigen::Matrix3d::Zero(), estimator_parameters_.dOmega_processCovariance*Eigen::Matrix3d::Identity() ;
+	measurementCovariance << 	estimator_parameters_.quat_measurementCovariance*Eigen::Matrix4d::Identity() ;
 }
 
 void RotationalEstimator::updateEstimate(const Eigen::Quaterniond& quat_measured)
-{
-	// Creating estimator message
-  //ros_vrpn_client::rotationalEstimator msg ;
-  
-	// Writing the old estimates to the message object
-/*	msg.quat_old.w = quat_hat.w() ;
-  msg.quat_old.x = quat_hat.x() ;
-  msg.quat_old.y = quat_hat.y() ;
-  msg.quat_old.z = quat_hat.z() ;
-  msg.omega_old.x = omega_hat.x() ;
-  msg.omega_old.y = omega_hat.y() ;
-  msg.omega_old.z = omega_hat.z() ;
-  msg.dQuat_old.x = dQuat_hat.x() ;
-  msg.dQuat_old.y = dQuat_hat.y() ;
-  msg.dQuat_old.z = dQuat_hat.z() ;
-  msg.dOmega_old.x = dOmega_hat.x() ;
-  msg.dOmega_old.y = dOmega_hat.y() ;
-  msg.dOmega_old.z = dOmega_hat.z() ;*/
-  
+{ 
+	// Writing the old estimate to the intermediate results structure
+	estimator_results_.quat_old = quat_hat ;
+	estimator_results_.omega_old = omega_hat ;
+	estimator_results_.dQuat_old = dQuat_hat ;
+	estimator_results_.dOmega_old = dOmega_hat ;
+
 	// Propagating the global state estimate
 	Eigen::Matrix<double, 7, 1> x_old ;
 	Eigen::Matrix<double, 7, 1> x_p ;
@@ -195,9 +187,6 @@ void RotationalEstimator::updateEstimate(const Eigen::Quaterniond& quat_measured
 	std::cout << "quat_measured: " << std::endl << quat_measured.coeffs() << std::endl ;
   std::cout << "quat_hat: " << std::endl << quat_hat.coeffs() << std::endl ;
 	std::cout << "omega_hat: " << std::endl << omega_hat << std::endl ;
-
-	// Publishing estimator message
-  //publisher.publish(msg) ;
 }
 
 Eigen::Quaterniond RotationalEstimator::getEstimatedOrientation() const
@@ -232,14 +221,9 @@ void RotationalEstimator::updateEstimate_propagateGlobalEstimate(Eigen::Matrix<d
 	Eigen::Vector3d omega_hat_p = omega_hat + omega_hat_p_ROC*estimator_parameters_.dt;
 	// Writing to apriori state
 	*x_p << quat_hat_p.coeffs(), omega_hat_p ;
-	// Writing to the message object
-/*	msg->quat_p.w = quat_hat_p.w() ;
-  msg->quat_p.x = quat_hat_p.x() ;
-  msg->quat_p.y = quat_hat_p.y() ;
-  msg->quat_p.z = quat_hat_p.z() ;
-  msg->omega_p.x = omega_hat_p.x() ;
-  msg->omega_p.y = omega_hat_p.y() ;
-  msg->omega_p.z = omega_hat_p.z() ;*/
+	// Saving the intermediate results
+	estimator_results_.quat_p = quat_hat_p ;
+	estimator_results_.omega_p = omega_hat_p ;
 }
 
 void RotationalEstimator::updateEstimate_propagateErrorEstimate(Eigen::Matrix<double, 6, 1>* dx_p, const Eigen::Matrix<double, 6, 1>& dx_old, const Eigen::Matrix<double, 7, 1>& x_old) //ros_vrpn_client::rotationalEstimator* msg
@@ -256,13 +240,9 @@ void RotationalEstimator::updateEstimate_propagateErrorEstimate(Eigen::Matrix<do
 	Eigen::Vector3d dOmega_hat_p = dOmega_hat + dOmega_hat_p_ROC*estimator_parameters_.dt ;
 	// Writing to apriori error state
 	*dx_p << dQuat_hat_p, dOmega_hat_p ;
-	// Writing to the message object
-/*  msg->dQuat_p.x = dQuat_hat_p.x() ;
-  msg->dQuat_p.y = dQuat_hat_p.y() ;
-  msg->dQuat_p.z = dQuat_hat_p.z() ;
-  msg->dOmega_p.x = dOmega_hat_p.x() ;
-  msg->dOmega_p.y = dOmega_hat_p.y() ;
-  msg->dOmega_p.z = dOmega_hat_p.z() ;*/
+	// Saving the intermediate results
+	estimator_results_.dQuat_p = dQuat_hat_p ;
+	estimator_results_.dOmega_p = dOmega_hat_p ;
 }
 
 void RotationalEstimator::updateEstimate_propagateErrorCovariance(Eigen::Matrix<double, 6, 6>* P_p, Eigen::Matrix<double, 6, 6>& P_old, const Eigen::Matrix<double, 7, 1>& x_old) //ros_vrpn_client::rotationalEstimator* msg
@@ -277,23 +257,13 @@ void RotationalEstimator::updateEstimate_propagateErrorCovariance(Eigen::Matrix<
 	L << Eigen::Matrix3d::Identity(), Eigen::Matrix3d::Zero(), Eigen::Matrix3d::Zero(), Eigen::Matrix3d::Identity() ;
 	// Performing propagation
 	*P_p = P_old + ( A*P_old + P_old*A.transpose() + L*processCovariance*(L.transpose()) )*estimator_parameters_.dt ;
-	// DEBUG: TODO: remove
-/*	std::cout << "A: " << std::endl << A << std::endl ;
-	std::cout << "L: " << std::endl << L << std::endl ;
-	std::cout << "P_p: " << std::endl << *P_p << std::endl ;*/
+	// Saving the intermediate results
+	//TODO: Add covariance
 }
 
 void RotationalEstimator::updateEstimate_updateErrorEstimate(Eigen::Matrix<double, 6, 1>* dx_m, Eigen::Matrix<double, 6, 6>* P_m, const Eigen::Quaterniond& quat_measured,
 																														 const Eigen::Matrix<double, 7, 1>& x_p, const Eigen::Matrix<double, 6, 1>& dx_p, const Eigen::Matrix<double, 6,6>& P_p) //ros_vrpn_client::rotationalEstimator* msg
 {
-/*	// DEBUG: TODO: remove
-	Eigen::Quaterniond test = Eigen::Quaterniond(1,0,0,0) ;
-	std::cout << "test quat: " << std::endl << test.coeffs() << std::endl ;
-	Eigen::Matrix<double, 4, 1> test_vec ; 
-	test_vec << 0, 0, 0, 1 ;
-	Eigen::Quaterniond test2 = Eigen::Quaterniond(test.coeffs() + test_vec ) ;
-	std::cout << "test2 quat: " << std::endl << test2.coeffs() << std::endl ;*/
-
 	// Extracting components of the state
 	Eigen::Quaterniond quat_hat_p = Eigen::Quaterniond(x_p.block<4,1>(0, 0)) ;
 	Eigen::Matrix<double, 3, 1> omega_hat_p = x_p.block<3,1>(4, 0) ;
@@ -321,13 +291,10 @@ void RotationalEstimator::updateEstimate_updateErrorEstimate(Eigen::Matrix<doubl
 	// Seperating the state parts
 	Eigen::Matrix<double, 3, 1> dQuat_hat_m = dx_m->block<3,1>(0,0);
 	Eigen::Matrix<double, 3, 1> dOmega_hat_m = dx_m->block<3,1>(3,0);
-	// Writing to the message object
-/*  msg->dQuat_m.x = dQuat_hat_m.x() ;
-  msg->dQuat_m.y = dQuat_hat_m.y() ;
-  msg->dQuat_m.z = dQuat_hat_m.z() ;
-  msg->dOmega_m.x = dOmega_hat_m.x() ;
-  msg->dOmega_m.y = dOmega_hat_m.y() ;
-  msg->dOmega_m.z = dOmega_hat_m.z() ;*/
+	// Saving the intermediate results
+	estimator_results_.dQuat_m = dQuat_hat_m ;
+	estimator_results_.dOmega_m = dOmega_hat_m ;
+	//TODO: Add covariance
 }
 
 void RotationalEstimator::updateEstimate_recombineErrorGlobal(Eigen::Matrix<double, 7, 1>* x_m, Eigen::Matrix<double, 6, 1>* dx_m, const Eigen::Matrix<double, 7, 1> x_p)//ros_vrpn_client::rotationalEstimator* msg
@@ -347,16 +314,11 @@ void RotationalEstimator::updateEstimate_recombineErrorGlobal(Eigen::Matrix<doub
 	// Writing to posteriori global state and error states
 	*x_m << quat_hat_m.coeffs(), omega_hat_m ;
 	*dx_m = Eigen::Matrix<double, 6, 1>::Zero() ;
-	// Writing to the message object
-/*	msg->quat_m.w = quat_hat_m.w() ;	
-  msg->quat_m.x = quat_hat_m.x() ;
-  msg->quat_m.y = quat_hat_m.y() ;
-  msg->quat_m.z = quat_hat_m.z() ;
-  msg->omega_m.x = omega_hat_m.x() ;
-  msg->omega_m.y = omega_hat_m.y() ;
-  msg->omega_m.z = omega_hat_m.z() ;*/
+	// Saving the intermediate results
+	estimator_results_.quat_m = quat_hat_m ;
+	estimator_results_.omega_m = omega_hat_m ;
 }
 
 
 
-}
+//}

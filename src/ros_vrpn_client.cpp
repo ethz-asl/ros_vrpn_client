@@ -75,7 +75,7 @@ vrpn_TRACKERCB prev_vrpn_data;
 //vrpn_TRACKERVELCB prev_vrpn_velocity_data;
 
 // Pointer to the vicon estimator
-vicon_estimation::ViconOdometryEstimator* pViconOdometryEstimator =  NULL;
+ViconOdometryEstimator* pViconOdometryEstimator =  NULL; //vicon_estimation::
 
 
 class Rigid_Body {
@@ -185,14 +185,12 @@ void VRPN_CALLBACK track_target(void *, const vrpn_TRACKERCB t) {
 
   // Updating the estimates with the new measurements
   pViconOdometryEstimator->updateEstimate(pos, q_rot);
+  pViconOdometryEstimator->publishResults();
   Eigen::Vector3d pos_hat = pViconOdometryEstimator->getEstimatedPosition();
   Eigen::Vector3d vel_hat = pViconOdometryEstimator->getEstimatedVelocity();
   Eigen::Quaterniond quat_hat = pViconOdometryEstimator->getEstimatedOrientation();
   Eigen::Vector3d omega_hat = pViconOdometryEstimator->getEstimatedAngularVelocity();
-  //std::cout << "pos_hat: " << std::endl << pos_hat << std::endl ;
-  //std::cout << "vel_hat: " << std::endl << vel_hat << std::endl ;
-  //std::cout << "quat_hat: " << std::endl << quat_hat << std::endl ;
-  //std::cout << "omega_hat: " << std::endl << omega_hat << std::endl ;
+
 
   // Populating topic contents. Published in main loop
   target_state->target.transform.translation.x = pos.x();
@@ -230,19 +228,6 @@ void VRPN_CALLBACK track_target(void *, const vrpn_TRACKERCB t) {
 }
 
 
-void initializeEstimatorParameters(ros::NodeHandle nh) {
-  // Setting translational estimator parameters with values from the parameter server
-  nh.getParam("tranEst_kp", pViconOdometryEstimator->translationalEstimator.estimator_parameters_.kp);
-  nh.getParam("tranEst_kv", pViconOdometryEstimator->translationalEstimator.estimator_parameters_.kv);
-  // Setting rotational estimator parameters with values from the parameter server
-  nh.getParam("dQuat_hat_initialCovariance", pViconOdometryEstimator->rotationalEstimator.estimator_parameters_.dQuat_hat_initialCovariance);
-  nh.getParam("dOmega_hat_initialCovariance", pViconOdometryEstimator->rotationalEstimator.estimator_parameters_.dOmega_hat_initialCovariance);
-  nh.getParam("dQuat_processCovariance", pViconOdometryEstimator->rotationalEstimator.estimator_parameters_.dQuat_processCovariance);
-  nh.getParam("dOmega_processCovariance", pViconOdometryEstimator->rotationalEstimator.estimator_parameters_.dOmega_processCovariance);
-  nh.getParam("quat_measurementCovariance", pViconOdometryEstimator->rotationalEstimator.estimator_parameters_.quat_measurementCovariance);
-}
-
-
 int main(int argc, char* argv[]) {
   ros::init(argc, argv, "ros_vrpn_client");
   ros::NodeHandle nh("~");
@@ -271,11 +256,11 @@ int main(int argc, char* argv[]) {
     ROS_FATAL("ROS param vrpn_coordinate_system should be either 'vicon' or 'optitrack'!");
   }
 
-  // Creating the vicon estimator
-  vicon_estimation::ViconOdometryEstimator viconOdometryEstimator;
+  // Creating the estimator
+  ViconOdometryEstimator viconOdometryEstimator(nh);
   pViconOdometryEstimator = &viconOdometryEstimator;
-  initializeEstimatorParameters(nh);
-  viconOdometryEstimator.reset() ;
+  viconOdometryEstimator.initializeParameters(nh);
+  viconOdometryEstimator.reset();
 
   // Creating object which handles data publishing
   Rigid_Body tool(nh, vrpn_server_ip, vrpn_port);

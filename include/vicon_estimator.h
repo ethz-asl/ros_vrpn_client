@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef VICON_ODOMETRY_ESTIMATOR_H
-#define VICON_ODOMETRY_ESTIMATOR_H
+#ifndef VICON_ESTIMATOR_H
+#define VICON_ESTIMATOR_H
 
 //#include <ros/ros.h>
 //#include <tf/transform_broadcaster.h>
@@ -26,11 +26,8 @@
 #include <math.h>
 #include <Eigen/Geometry>
 
-// Ros includes TODO(millanea): remove ROS stuff
-//#include <ros/ros.h>
-//#include <ros_vrpn_client/rotationalEstimator.h>
 
-namespace vicon_estimation {
+//namespace vicon_estimation {
 
 
 
@@ -164,7 +161,6 @@ class RotationalEstimator {
     RotationalEstimatorResults estimator_results_ ;
 
   private:
-    //ros::Publisher publisher;
 
   	// Global estimates
     Eigen::Quaterniond quat_hat;
@@ -192,11 +188,11 @@ class RotationalEstimator {
     void updateEstimate_recombineErrorGlobal(Eigen::Matrix<double, 7, 1>* x_m, Eigen::Matrix<double, 6, 1>* dx_m, const Eigen::Matrix<double, 7, 1> x_p); // ros_vrpn_client::rotationalEstimator* msg
 };
 
-class ViconOdometryEstimator{
+class ViconEstimator{
 
   public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-    ViconOdometryEstimator(); //ros::NodeHandle& nh
+    ViconEstimator(); //ros::NodeHandle& nh
 
     // Update estimated quantities with new measurement
     void updateEstimate(const Eigen::Vector3d& pos_measured, const Eigen::Quaterniond& quat_measured);
@@ -218,6 +214,6 @@ class ViconOdometryEstimator{
 };
 
 
-}
+//}
 
-#endif // VICON_ODOMETRY_ESTIMATOR_H
+#endif // VICON_ESTIMATOR_H

@@ -27,8 +27,8 @@
 #include <Eigen/Geometry>
 
 // Ros includes TODO(millanea): remove ROS stuff
-#include <ros/ros.h>
-#include <ros_vrpn_client/rotationalEstimator.h>
+//#include <ros/ros.h>
+//#include <ros_vrpn_client/rotationalEstimator.h>
 
 namespace vicon_estimation {
 
@@ -57,8 +57,9 @@ class TranslationalEstimatorParameters {
 class TranslationalEstimator {
 
   public:
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     // Constructor
-    TranslationalEstimator(ros::NodeHandle& nh);
+    TranslationalEstimator(); //ros::NodeHandle& nh
     // Update estimated quantities with new measurement
     void updateEstimate(const Eigen::Vector3d& pos_measured);
     // Return estimated position
@@ -78,11 +79,11 @@ class TranslationalEstimator {
 
 // The parameter class for the translational estimator and parameter default values
 static const double dtRotationalDefault = 0.01;
-static const double dQuat_hat_initialCovarianceDefault = 1;
-static const double dOmega_hat_initialCovarianceDefault = 1;
+static const double dQuat_hat_initialCovarianceDefault = 10;
+static const double dOmega_hat_initialCovarianceDefault = 10;
 static const double dQuat_processCovarianceDefault = 1;
 static const double dOmega_processCovarianceDefault = 1;
-static const double quat_measurementCovarianceDefault = 1;
+static const double quat_measurementCovarianceDefault = 0.01;
 class RotationalEstimatorParameters {
 
   public:
@@ -104,14 +105,53 @@ class RotationalEstimatorParameters {
 	  double quat_measurementCovariance;
 };
 
+class RotationalEstimatorResults {
+
+  public:
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+    // Constructor
+    RotationalEstimatorResults() :
+      quat_old(1.0, 0.0, 0.0, 0.0),
+      omega_old(0.0, 0.0, 0.0),
+      dQuat_old(0.0, 0.0, 0.0),
+      dOmega_old(0.0, 0.0, 0.0),
+      quat_p(1.0, 0.0, 0.0, 0.0),
+      omega_p(0.0, 0.0, 0.0),
+      dQuat_p(0.0, 0.0, 0.0),
+      dOmega_p(0.0, 0.0, 0.0),
+      quat_m(1.0, 0.0, 0.0, 0.0),
+      omega_m(0.0, 0.0, 0.0),
+      dQuat_m(0.0, 0.0, 0.0),
+      dOmega_m(0.0, 0.0, 0.0)
+    { };
+
+    // Intermediate Estimator results
+    Eigen::Quaterniond quat_old;
+    Eigen::Vector3d omega_old;
+    Eigen::Vector3d dQuat_old;
+    Eigen::Vector3d dOmega_old;
+    Eigen::Quaterniond quat_p;
+    Eigen::Vector3d omega_p;
+    Eigen::Vector3d dQuat_p;
+    Eigen::Vector3d dOmega_p;
+    Eigen::Quaterniond quat_m;
+    Eigen::Vector3d omega_m;
+    Eigen::Vector3d dQuat_m;
+    Eigen::Vector3d dOmega_m;
+
+};
+
 // Estimated object orientation and roll rates from vicon data
 class RotationalEstimator {
 
   public:
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     // Constructor
-    RotationalEstimator(ros::NodeHandle& nh);
+    RotationalEstimator(); //ros::NodeHandle& nh
     // Update estimated quantities with new measurement
     void updateEstimate(const Eigen::Quaterniond& quat_measured);
+    // Reset the estimator
+    void reset();
     // Return estimated orientation
     Eigen::Quaterniond getEstimatedOrientation() const;
     // Return estimated angular velocity
@@ -120,8 +160,11 @@ class RotationalEstimator {
     // Estimator parameters
     RotationalEstimatorParameters estimator_parameters_;
 
+    // Estimator (intermediate) results
+    RotationalEstimatorResults estimator_results_ ;
+
   private:
-    ros::Publisher publisher;
+    //ros::Publisher publisher;
 
   	// Global estimates
     Eigen::Quaterniond quat_hat;
@@ -137,30 +180,29 @@ class RotationalEstimator {
     // Function to generate a skew symmetric matrix from a vector
   	Eigen::Matrix3d skewMatrix(const Eigen::Vector3d& vec ) const;
     //
-    void updateEstimate_propagateGlobalEstimate(Eigen::Matrix<double, 7, 1>* x_p, const Eigen::Matrix<double, 7, 1>& x_old,
-                                                ros_vrpn_client::rotationalEstimator* msg);
+    void updateEstimate_propagateGlobalEstimate(Eigen::Matrix<double, 7, 1>* x_p, const Eigen::Matrix<double, 7, 1>& x_old ); //ros_vrpn_client::rotationalEstimator* msg
 
-    void updateEstimate_propagateErrorEstimate(Eigen::Matrix<double, 6, 1>* dx_p, const Eigen::Matrix<double, 6, 1>& dx_old, const Eigen::Matrix<double, 7, 1>& x_old,
-                                               ros_vrpn_client::rotationalEstimator* msg);
+    void updateEstimate_propagateErrorEstimate(Eigen::Matrix<double, 6, 1>* dx_p, const Eigen::Matrix<double, 6, 1>& dx_old, const Eigen::Matrix<double, 7, 1>& x_old); //ros_vrpn_client::rotationalEstimator* msg
 
-    void updateEstimate_propagateErrorCovariance(Eigen::Matrix<double, 6, 6>* P_p, Eigen::Matrix<double, 6, 6>& P_old, const Eigen::Matrix<double, 7, 1>& x_old,
-                                                 ros_vrpn_client::rotationalEstimator* msg);
+    void updateEstimate_propagateErrorCovariance(Eigen::Matrix<double, 6, 6>* P_p, Eigen::Matrix<double, 6, 6>& P_old, const Eigen::Matrix<double, 7, 1>& x_old); //ros_vrpn_client::rotationalEstimator* msg
 
     void updateEstimate_updateErrorEstimate(Eigen::Matrix<double, 6, 1>* dx_m, Eigen::Matrix<double, 6, 6>* P_m, const Eigen::Quaterniond& quat_measured,
-                                            const Eigen::Matrix<double, 7, 1>& x_p, const Eigen::Matrix<double, 6, 1>& dx_p, const Eigen::Matrix<double, 6,6>& P_p,
-                                            ros_vrpn_client::rotationalEstimator* msg);
+                                            const Eigen::Matrix<double, 7, 1>& x_p, const Eigen::Matrix<double, 6, 1>& dx_p, const Eigen::Matrix<double, 6,6>& P_p); //ros_vrpn_client::rotationalEstimator* msg
 
-    void updateEstimate_recombineErrorGlobal(Eigen::Matrix<double, 7, 1>* x_m, Eigen::Matrix<double, 6, 1>* dx_m, const Eigen::Matrix<double, 7, 1> x_p,
-                                             ros_vrpn_client::rotationalEstimator* msg);
+    void updateEstimate_recombineErrorGlobal(Eigen::Matrix<double, 7, 1>* x_m, Eigen::Matrix<double, 6, 1>* dx_m, const Eigen::Matrix<double, 7, 1> x_p); // ros_vrpn_client::rotationalEstimator* msg
 };
 
 class ViconOdometryEstimator{
 
   public:
-    ViconOdometryEstimator(ros::NodeHandle& nh);
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+    ViconOdometryEstimator(); //ros::NodeHandle& nh
 
     // Update estimated quantities with new measurement
     void updateEstimate(const Eigen::Vector3d& pos_measured, const Eigen::Quaterniond& quat_measured);
+
+    // Reset the estimator
+    void reset();
 
     // Functions providing access to the various estimates
     Eigen::Vector3d getEstimatedPosition() const;

@@ -231,9 +231,15 @@ void VRPN_CALLBACK track_target(void *, const vrpn_TRACKERCB t) {
 
 
 void initializeEstimatorParameters(ros::NodeHandle nh) {
-  // Setting estimator parameters with values from the parameter server
+  // Setting translational estimator parameters with values from the parameter server
   nh.getParam("tranEst_kp", pViconOdometryEstimator->translationalEstimator.estimator_parameters_.kp);
   nh.getParam("tranEst_kv", pViconOdometryEstimator->translationalEstimator.estimator_parameters_.kv);
+  // Setting rotational estimator parameters with values from the parameter server
+  nh.getParam("dQuat_hat_initialCovariance", pViconOdometryEstimator->rotationalEstimator.estimator_parameters_.dQuat_hat_initialCovariance);
+  nh.getParam("dOmega_hat_initialCovariance", pViconOdometryEstimator->rotationalEstimator.estimator_parameters_.dOmega_hat_initialCovariance);
+  nh.getParam("dQuat_processCovariance", pViconOdometryEstimator->rotationalEstimator.estimator_parameters_.dQuat_processCovariance);
+  nh.getParam("dOmega_processCovariance", pViconOdometryEstimator->rotationalEstimator.estimator_parameters_.dOmega_processCovariance);
+  nh.getParam("quat_measurementCovariance", pViconOdometryEstimator->rotationalEstimator.estimator_parameters_.quat_measurementCovariance);
 }
 
 
@@ -266,9 +272,10 @@ int main(int argc, char* argv[]) {
   }
 
   // Creating the vicon estimator
-  vicon_estimation::ViconOdometryEstimator viconOdometryEstimator(nh);
+  vicon_estimation::ViconOdometryEstimator viconOdometryEstimator;
   pViconOdometryEstimator = &viconOdometryEstimator;
   initializeEstimatorParameters(nh);
+  viconOdometryEstimator.reset() ;
 
   // Creating object which handles data publishing
   Rigid_Body tool(nh, vrpn_server_ip, vrpn_port);

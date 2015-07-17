@@ -5,10 +5,16 @@
     <param name="vrpn_coordinate_system" value="vicon" />
     <param name="tranEst_kp" value="1.0" />
     <param name="tranEst_kv" value="10.0" />
-    <param name="dQuat_hat_initialCovariance" value="100.0" />
+<!--     <param name="dQuat_hat_initialCovariance" value="100.0" />
     <param name="dOmega_hat_initialCovariance" value="100.0" />
     <param name="dQuat_processCovariance" value="0.001" />
     <param name="dOmega_processCovariance" value="1" />
-    <param name="quat_measurementCovariance" value="100" />    <!-- 0.0000001 -->
+    <param name="quat_measurementCovariance" value="100" /> -->
+    <param name="dt" value="0.01" />
+    <param name="dQuat_hat_initialCovariance" value="0.1" />
+    <param name="dOmega_hat_initialCovariance" value="0.04" />
+    <param name="dQuat_processCovariance" value="0.0000000001" />
+    <param name="dOmega_processCovariance" value="0.0001" />
+    <param name="quat_measurementCovariance" value="0.0025" />
   </node>
 </launch>

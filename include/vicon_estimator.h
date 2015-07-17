@@ -108,6 +108,7 @@ class RotationalEstimatorResults {
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     // Constructor
     RotationalEstimatorResults() :
+      quat_measured(1.0, 0.0, 0.0, 0.0),
       quat_old(1.0, 0.0, 0.0, 0.0),
       omega_old(0.0, 0.0, 0.0),
       dQuat_old(0.0, 0.0, 0.0),
@@ -123,6 +124,7 @@ class RotationalEstimatorResults {
     { };
 
     // Intermediate Estimator results
+    Eigen::Quaterniond quat_measured;
     Eigen::Quaterniond quat_old;
     Eigen::Vector3d omega_old;
     Eigen::Vector3d dQuat_old;

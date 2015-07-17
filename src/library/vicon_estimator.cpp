@@ -142,6 +142,9 @@ void RotationalEstimator::reset()
 
 void RotationalEstimator::updateEstimate(const Eigen::Quaterniond& quat_measured)
 { 
+	// Writing the raw measurement to the intermediate results structure
+	estimator_results_.quat_measured = quat_measured ;
+
 	// Writing the old estimate to the intermediate results structure
 	estimator_results_.quat_old = quat_hat ;
 	estimator_results_.omega_old = omega_hat ;

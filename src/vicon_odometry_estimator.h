@@ -47,7 +47,7 @@
       // Reset the estimator
     	void reset();
     	// Publishing the intermediate results
-    	void publishResults();
+    	void publishResults(ros::Time timestamp);
 
       void updateEstimate(const Eigen::Vector3d& pos_measured, const Eigen::Quaterniond& quat_measured);
   		Eigen::Vector3d getEstimatedPosition() const;

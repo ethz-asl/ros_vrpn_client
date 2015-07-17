@@ -164,7 +164,7 @@ void VRPN_CALLBACK track_target(void *, const vrpn_TRACKERCB t) {
     ROS_WARN("Repeated Values");
 
   // Extracting the delta time between callbacks
-  //std::cout << "delta time (s): " << (t.msg_time.tv_usec - prev_vrpn_data.msg_time.tv_usec) / 1000000.0 << std::endl;
+  std::cout << "delta time (s): " << (t.msg_time.tv_usec - prev_vrpn_data.msg_time.tv_usec) / 1000000.0 << std::endl;
 
   // Storing current message for next callback
   prev_vrpn_data = t;
@@ -185,7 +185,7 @@ void VRPN_CALLBACK track_target(void *, const vrpn_TRACKERCB t) {
 
   // Updating the estimates with the new measurements
   pViconOdometryEstimator->updateEstimate(pos, q_rot);
-  pViconOdometryEstimator->publishResults();
+  pViconOdometryEstimator->publishResults(timestamp);
   Eigen::Vector3d pos_hat = pViconOdometryEstimator->getEstimatedPosition();
   Eigen::Vector3d vel_hat = pViconOdometryEstimator->getEstimatedVelocity();
   Eigen::Quaterniond quat_hat = pViconOdometryEstimator->getEstimatedOrientation();

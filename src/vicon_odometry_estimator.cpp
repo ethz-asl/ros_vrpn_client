@@ -16,6 +16,7 @@ void ViconOdometryEstimator::initializeParameters(ros::NodeHandle& nh)
   nh.getParam("tranEst_kp", viconEstimator_.translationalEstimator.estimator_parameters_.kp);
   nh.getParam("tranEst_kv", viconEstimator_.translationalEstimator.estimator_parameters_.kv);
   // Setting rotational estimator parameters with values from the parameter server
+  nh.getParam("dt", viconEstimator_.rotationalEstimator.estimator_parameters_.dt);
   nh.getParam("dQuat_hat_initialCovariance", viconEstimator_.rotationalEstimator.estimator_parameters_.dQuat_hat_initialCovariance);
   nh.getParam("dOmega_hat_initialCovariance", viconEstimator_.rotationalEstimator.estimator_parameters_.dOmega_hat_initialCovariance);
   nh.getParam("dQuat_processCovariance", viconEstimator_.rotationalEstimator.estimator_parameters_.dQuat_processCovariance);
@@ -28,10 +29,19 @@ void ViconOdometryEstimator::reset()
 	viconEstimator_.reset();
 }
 
-void ViconOdometryEstimator::publishResults()
+void ViconOdometryEstimator::publishResults(ros::Time timestamp)
 {
 	// Creating estimator message
   ros_vrpn_client::rotationalEstimator msg ;
+
+  // Attaching the vprn timestamp
+  msg.header.stamp = timestamp ;
+
+  // Writing the measurement to the message object
+  msg.quat_measured.w = viconEstimator_.rotationalEstimator.estimator_results_.quat_measured.w() ;
+  msg.quat_measured.x = viconEstimator_.rotationalEstimator.estimator_results_.quat_measured.x() ;
+  msg.quat_measured.y = viconEstimator_.rotationalEstimator.estimator_results_.quat_measured.y() ;
+  msg.quat_measured.z = viconEstimator_.rotationalEstimator.estimator_results_.quat_measured.z() ;
 
 	// Writing the old estimates to the message object
 	msg.quat_old.w = viconEstimator_.rotationalEstimator.estimator_results_.quat_old.w() ;

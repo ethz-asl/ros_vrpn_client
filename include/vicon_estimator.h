@@ -76,11 +76,11 @@ class TranslationalEstimator {
 
 // The parameter class for the translational estimator and parameter default values
 static const double dtRotationalDefault = 0.01;
-static const double dQuat_hat_initialCovarianceDefault = 10;
-static const double dOmega_hat_initialCovarianceDefault = 10;
-static const double dQuat_processCovarianceDefault = 1;
+static const double dQuat_hat_initialCovarianceDefault = 1;
+static const double dOmega_hat_initialCovarianceDefault = 1;
+static const double dQuat_processCovarianceDefault = 0.01;
 static const double dOmega_processCovarianceDefault = 1;
-static const double quat_measurementCovarianceDefault = 0.01;
+static const double quat_measurementCovarianceDefault = 0.0005;
 class RotationalEstimatorParameters {
 
   public:

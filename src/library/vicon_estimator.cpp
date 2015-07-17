@@ -187,9 +187,9 @@ void RotationalEstimator::updateEstimate(const Eigen::Quaterniond& quat_measured
 	covariance = P_old;*/
 
 	// Outputting the messages to the console
-	std::cout << "quat_measured: " << std::endl << quat_measured.coeffs() << std::endl ;
-  std::cout << "quat_hat: " << std::endl << quat_hat.coeffs() << std::endl ;
-	std::cout << "omega_hat: " << std::endl << omega_hat << std::endl ;
+	//std::cout << "quat_measured: " << std::endl << quat_measured.coeffs() << std::endl ;
+  //std::cout << "quat_hat: " << std::endl << quat_hat.coeffs() << std::endl ;
+	//std::cout << "omega_hat: " << std::endl << omega_hat << std::endl ;
 }
 
 Eigen::Quaterniond RotationalEstimator::getEstimatedOrientation() const
@@ -273,7 +273,7 @@ void RotationalEstimator::updateEstimate_updateErrorEstimate(Eigen::Matrix<doubl
 	Eigen::Matrix<double, 3, 1> dQuat_hat_p = dx_p.block<3,1>(0, 0) ;
 	Eigen::Matrix<double, 3, 1> dOmega_hat_p = dx_p.block<3,1>(3, 0) ;
 	// DEBUG: TODO: remove
-	std::cout << "dQuat_hat_p: " << std::endl << dQuat_hat_p << std::endl ;
+	//std::cout << "dQuat_hat_p: " << std::endl << dQuat_hat_p << std::endl ;
 	// Constructing linearized measurement matrix
 	Eigen::Matrix<double, 4, 3>  H_dq ;
 	Eigen::Matrix<double, 4, 6>  H ;

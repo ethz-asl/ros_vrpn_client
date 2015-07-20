@@ -49,16 +49,19 @@
     	// Publishing the intermediate results
     	void publishResults(ros::Time timestamp);
 
+      // Calls the underlying estimator, updating the estimate with the latest measurement
       void updateEstimate(const Eigen::Vector3d& pos_measured, const Eigen::Quaterniond& quat_measured);
+      // Getter methods for estimates values
   		Eigen::Vector3d getEstimatedPosition() const;
   		Eigen::Vector3d getEstimatedVelocity() const;
   		Eigen::Quaterniond getEstimatedOrientation() const;
   		Eigen::Vector3d getEstimatedAngularVelocity() const;
 
     private:
+      // Underlying estimator
     	ViconEstimator viconEstimator_ ;
-
-    	ros::Publisher publisher;
+      // Publisher
+    	ros::Publisher publisher_;
 
   };
 

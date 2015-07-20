@@ -7,7 +7,7 @@ ViconOdometryEstimator::ViconOdometryEstimator(ros::NodeHandle& nh) :
 	viconEstimator_()
 {
 	// Creating publisher for intermediate estimator values
-  publisher = nh.advertise<ros_vrpn_client::rotationalEstimator>("rotationalEstimator", 100);
+  publisher_ = nh.advertise<ros_vrpn_client::rotationalEstimator>("rotationalEstimator", 100);
 }
 
 void ViconOdometryEstimator::initializeParameters(ros::NodeHandle& nh)
@@ -91,7 +91,7 @@ void ViconOdometryEstimator::publishResults(ros::Time timestamp)
   msg.omega_m.z = viconEstimator_.rotationalEstimator.estimator_results_.omega_m.z() ;
 
 	// Publishing estimator message
-  publisher.publish(msg);
+  publisher_.publish(msg);
 }
 
 void ViconOdometryEstimator::updateEstimate(const Eigen::Vector3d& pos_measured, const Eigen::Quaterniond& quat_measured)

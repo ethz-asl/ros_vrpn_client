@@ -47,8 +47,6 @@
 
 #include "vicon_odometry_estimator.h"
 
-#include <ros_vrpn_client/est_rot.h>
-
 void VRPN_CALLBACK track_target(void *, const vrpn_TRACKERCB t);
 //void VRPN_CALLBACK track_target_velocity(void *, const vrpn_TRACKERVELCB tv);
 //void VRPN_CALLBACK track_target_acceleration(void *, const vrpn_TRACKERACCCB ta);

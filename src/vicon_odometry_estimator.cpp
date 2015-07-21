@@ -7,21 +7,25 @@ ViconOdometryEstimator::ViconOdometryEstimator(ros::NodeHandle& nh) :
 	viconEstimator_()
 {
 	// Creating publisher for intermediate estimator values
-  publisher_ = nh.advertise<ros_vrpn_client::rotationalEstimator>("rotationalEstimator", 100);
+  publisher_ = nh.advertise<ros_vrpn_client::viconEstimator>("viconEstimator", 100);
 }
 
 void ViconOdometryEstimator::initializeParameters(ros::NodeHandle& nh)
 {
-  // Setting translational estimator parameters with values from the parameter server
-  nh.getParam("tranEst_kp", viconEstimator_.translationalEstimator.estimator_parameters_.kp);
-  nh.getParam("tranEst_kv", viconEstimator_.translationalEstimator.estimator_parameters_.kv);
-  // Setting rotational estimator parameters with values from the parameter server
-  nh.getParam("dt", viconEstimator_.rotationalEstimator.estimator_parameters_.dt);
-  nh.getParam("dQuat_hat_initialCovariance", viconEstimator_.rotationalEstimator.estimator_parameters_.dQuat_hat_initialCovariance);
-  nh.getParam("dOmega_hat_initialCovariance", viconEstimator_.rotationalEstimator.estimator_parameters_.dOmega_hat_initialCovariance);
-  nh.getParam("dQuat_processCovariance", viconEstimator_.rotationalEstimator.estimator_parameters_.dQuat_processCovariance);
-  nh.getParam("dOmega_processCovariance", viconEstimator_.rotationalEstimator.estimator_parameters_.dOmega_processCovariance);
-  nh.getParam("quat_measurementCovariance", viconEstimator_.rotationalEstimator.estimator_parameters_.quat_measurementCovariance);
+  // Recovering translational estimator parameters values from the parameter server
+  TranslationalEstimatorParameters translationalEstimatorParameters;
+  nh.getParam("tranEst_kp", translationalEstimatorParameters.kp);
+  nh.getParam("tranEst_kv", translationalEstimatorParameters.kv);
+  // Recovering rotational estimator parameters values from the parameter server
+  RotationalEstimatorParameters rotationalEstimatorParameters;
+  nh.getParam("dt", rotationalEstimatorParameters.dt);
+  nh.getParam("dQuat_hat_initialCovariance", rotationalEstimatorParameters.dQuat_hat_initialCovariance);
+  nh.getParam("dOmega_hat_initialCovariance", rotationalEstimatorParameters.dOmega_hat_initialCovariance);
+  nh.getParam("dQuat_processCovariance", rotationalEstimatorParameters.dQuat_processCovariance);
+  nh.getParam("dOmega_processCovariance", rotationalEstimatorParameters.dOmega_processCovariance);
+  nh.getParam("quat_measurementCovariance", rotationalEstimatorParameters.quat_measurementCovariance);
+  // Setting parameters in estimator
+  viconEstimator_.setParameters(translationalEstimatorParameters, rotationalEstimatorParameters);
 }
 
 void ViconOdometryEstimator::reset()
@@ -31,93 +35,65 @@ void ViconOdometryEstimator::reset()
 
 void ViconOdometryEstimator::publishResults(ros::Time timestamp)
 {
-	// Creating estimator message
-  ros_vrpn_client::rotationalEstimator msg ;
 
+  TranslationalEstimatorResults translationalEstimatorResults;
+  RotationalEstimatorResults rotationalEstimatorResults;
+  viconEstimator_.getIntermediateResults(&translationalEstimatorResults, &rotationalEstimatorResults);
+
+	// Creating estimator message
+  ros_vrpn_client::viconEstimator msg ;
   // Attaching the vprn timestamp
   msg.header.stamp = timestamp ;
 
   // Writing the measurement to the message object
-  msg.quat_measured.w = viconEstimator_.rotationalEstimator.estimator_results_.quat_measured.w() ;
-  msg.quat_measured.x = viconEstimator_.rotationalEstimator.estimator_results_.quat_measured.x() ;
-  msg.quat_measured.y = viconEstimator_.rotationalEstimator.estimator_results_.quat_measured.y() ;
-  msg.quat_measured.z = viconEstimator_.rotationalEstimator.estimator_results_.quat_measured.z() ;
+  msg.pos_measured.x = translationalEstimatorResults.pos_measured.x() ;
+  msg.pos_measured.y = translationalEstimatorResults.pos_measured.y() ;
+  msg.pos_measured.z = translationalEstimatorResults.pos_measured.z() ;
+  // Writing the old estimates to the message object
+  msg.pos_old.x = translationalEstimatorResults.pos_old.x() ;
+  msg.pos_old.y = translationalEstimatorResults.pos_old.y() ;
+  msg.pos_old.z = translationalEstimatorResults.pos_old.z() ;
+  msg.vel_old.x = translationalEstimatorResults.vel_old.x() ;
+  msg.vel_old.y = translationalEstimatorResults.vel_old.y() ;
+  msg.vel_old.z = translationalEstimatorResults.vel_old.z() ;
+  // Posteriori results
+  msg.pos_est.x = translationalEstimatorResults.pos_est.x() ;
+  msg.pos_est.y = translationalEstimatorResults.pos_est.y() ;
+  msg.pos_est.z = translationalEstimatorResults.pos_est.z() ;
+  msg.vel_est.x = translationalEstimatorResults.vel_est.x() ;
+  msg.vel_est.y = translationalEstimatorResults.vel_est.y() ;
+  msg.vel_est.z = translationalEstimatorResults.vel_est.z() ;
 
-	// Writing the old estimates to the message object
-	msg.quat_old.w = viconEstimator_.rotationalEstimator.estimator_results_.quat_old.w() ;
-  msg.quat_old.x = viconEstimator_.rotationalEstimator.estimator_results_.quat_old.x() ;
-  msg.quat_old.y = viconEstimator_.rotationalEstimator.estimator_results_.quat_old.y() ;
-  msg.quat_old.z = viconEstimator_.rotationalEstimator.estimator_results_.quat_old.z() ;
-  msg.omega_old.x = viconEstimator_.rotationalEstimator.estimator_results_.omega_old.x() ;
-  msg.omega_old.y = viconEstimator_.rotationalEstimator.estimator_results_.omega_old.y() ;
-  msg.omega_old.z = viconEstimator_.rotationalEstimator.estimator_results_.omega_old.z() ;
-  msg.dQuat_old.x = viconEstimator_.rotationalEstimator.estimator_results_.dQuat_old.x() ;
-  msg.dQuat_old.y = viconEstimator_.rotationalEstimator.estimator_results_.dQuat_old.y() ;
-  msg.dQuat_old.z = viconEstimator_.rotationalEstimator.estimator_results_.dQuat_old.z() ;
-  msg.dOmega_old.x = viconEstimator_.rotationalEstimator.estimator_results_.dOmega_old.x() ;
-  msg.dOmega_old.y = viconEstimator_.rotationalEstimator.estimator_results_.dOmega_old.y() ;
-  msg.dOmega_old.z = viconEstimator_.rotationalEstimator.estimator_results_.dOmega_old.z() ;
 
-	// Priori results
-	msg.quat_p.w = viconEstimator_.rotationalEstimator.estimator_results_.quat_p.w() ;
-	msg.quat_p.x = viconEstimator_.rotationalEstimator.estimator_results_.quat_p.x() ;
-	msg.quat_p.y = viconEstimator_.rotationalEstimator.estimator_results_.quat_p.y() ;
-	msg.quat_p.z = viconEstimator_.rotationalEstimator.estimator_results_.quat_p.z() ;
-	msg.omega_p.x = viconEstimator_.rotationalEstimator.estimator_results_.omega_p.x() ;
-	msg.omega_p.y = viconEstimator_.rotationalEstimator.estimator_results_.omega_p.y() ;
-	msg.omega_p.z = viconEstimator_.rotationalEstimator.estimator_results_.omega_p.z() ;
-
-  msg.dQuat_p.x = viconEstimator_.rotationalEstimator.estimator_results_.dQuat_p.x() ;
-  msg.dQuat_p.y = viconEstimator_.rotationalEstimator.estimator_results_.dQuat_p.y() ;
-  msg.dQuat_p.z = viconEstimator_.rotationalEstimator.estimator_results_.dQuat_p.z() ;
-  msg.dOmega_p.x = viconEstimator_.rotationalEstimator.estimator_results_.dOmega_p.x() ;
-  msg.dOmega_p.y = viconEstimator_.rotationalEstimator.estimator_results_.dOmega_p.y() ;
-  msg.dOmega_p.z = viconEstimator_.rotationalEstimator.estimator_results_.dOmega_p.z() ;
-
+  // Writing the measurement to the message object
+  msg.quat_measured.w = rotationalEstimatorResults.quat_measured.w() ;
+  msg.quat_measured.x = rotationalEstimatorResults.quat_measured.x() ;
+  msg.quat_measured.y = rotationalEstimatorResults.quat_measured.y() ;
+  msg.quat_measured.z = rotationalEstimatorResults.quat_measured.z() ;
+  // Writing the old estimates to the message object
+	msg.quat_old.w = rotationalEstimatorResults.quat_old.w() ;
+  msg.quat_old.x = rotationalEstimatorResults.quat_old.x() ;
+  msg.quat_old.y = rotationalEstimatorResults.quat_old.y() ;
+  msg.quat_old.z = rotationalEstimatorResults.quat_old.z() ;
+  msg.omega_old.x = rotationalEstimatorResults.omega_old.x() ;
+  msg.omega_old.y = rotationalEstimatorResults.omega_old.y() ;
+  msg.omega_old.z = rotationalEstimatorResults.omega_old.z() ;
 	// Posteriori results
-  msg.dQuat_m.x = viconEstimator_.rotationalEstimator.estimator_results_.dQuat_m.x() ;
-  msg.dQuat_m.y = viconEstimator_.rotationalEstimator.estimator_results_.dQuat_m.y() ;
-  msg.dQuat_m.z = viconEstimator_.rotationalEstimator.estimator_results_.dQuat_m.z() ;
-  msg.dOmega_m.x = viconEstimator_.rotationalEstimator.estimator_results_.dOmega_m.x() ;
-  msg.dOmega_m.y = viconEstimator_.rotationalEstimator.estimator_results_.dOmega_m.y() ;
-  msg.dOmega_m.z = viconEstimator_.rotationalEstimator.estimator_results_.dOmega_m.z() ;
-
-	msg.quat_m.w = viconEstimator_.rotationalEstimator.estimator_results_.quat_m.w() ;	
-  msg.quat_m.x = viconEstimator_.rotationalEstimator.estimator_results_.quat_m.x() ;
-  msg.quat_m.y = viconEstimator_.rotationalEstimator.estimator_results_.quat_m.y() ;
-  msg.quat_m.z = viconEstimator_.rotationalEstimator.estimator_results_.quat_m.z() ;
-  msg.omega_m.x = viconEstimator_.rotationalEstimator.estimator_results_.omega_m.x() ;
-  msg.omega_m.y = viconEstimator_.rotationalEstimator.estimator_results_.omega_m.y() ;
-  msg.omega_m.z = viconEstimator_.rotationalEstimator.estimator_results_.omega_m.z() ;
-
+	msg.quat_est.w = rotationalEstimatorResults.quat_est.w() ;	
+  msg.quat_est.x = rotationalEstimatorResults.quat_est.x() ;
+  msg.quat_est.y = rotationalEstimatorResults.quat_est.y() ;
+  msg.quat_est.z = rotationalEstimatorResults.quat_est.z() ;
+  msg.omega_est.x = rotationalEstimatorResults.omega_est.x() ;
+  msg.omega_est.y = rotationalEstimatorResults.omega_est.y() ;
+  msg.omega_est.z = rotationalEstimatorResults.omega_est.z() ;
+  
 	// Publishing estimator message
   publisher_.publish(msg);
 }
 
 void ViconOdometryEstimator::updateEstimate(const Eigen::Vector3d& pos_measured, const Eigen::Quaterniond& quat_measured)
 {
-	viconEstimator_.updateEstimate(pos_measured, quat_measured);
+  viconEstimator_.updateEstimate(pos_measured, quat_measured);
 }
-
-Eigen::Vector3d ViconOdometryEstimator::getEstimatedPosition() const
-{
-	return viconEstimator_.getEstimatedPosition() ;
-}
-
-Eigen::Vector3d ViconOdometryEstimator::getEstimatedVelocity() const
-{
-	return viconEstimator_.getEstimatedVelocity() ;
-}
-
-Eigen::Quaterniond ViconOdometryEstimator::getEstimatedOrientation() const
-{
-	return viconEstimator_.getEstimatedOrientation() ;
-}
-
-Eigen::Vector3d ViconOdometryEstimator::getEstimatedAngularVelocity() const
-{
-	return viconEstimator_.getEstimatedAngularVelocity() ;
-}
-
 
 //}

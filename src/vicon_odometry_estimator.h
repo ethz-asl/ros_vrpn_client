@@ -17,53 +17,47 @@
 #ifndef VICON_ODOMETRY_ESTIMATOR_H
 #define VICON_ODOMETRY_ESTIMATOR_H
 
-//#include <ros/ros.h>
-//#include <tf/transform_broadcaster.h>
-//#include <geometry_msgs/TransformStamped.h>
-//#include <nav_msgs/Odometry.h>
 #include <iostream>
 #include <stdio.h>
 #include <math.h>
-#include <Eigen/Geometry>
 
-// Ros includes
+ #include <Eigen/Geometry>
 #include <ros/ros.h>
-#include <ros_vrpn_client/rotationalEstimator.h>
+#include <ros_vrpn_client/viconEstimator.h>
 
- // Estimator include
 #include "vicon_estimator.h"
 
 //namespace vicon_estimation {
 
-  class ViconOdometryEstimator
-  {
+class ViconOdometryEstimator
+{
 
-    public:
-    	// Constructor
-      ViconOdometryEstimator(ros::NodeHandle& nh); 
+  public:
+  	// Constructor
+    ViconOdometryEstimator(ros::NodeHandle& nh); 
 
-			// Initialize the estimator parameters
-      void initializeParameters(ros::NodeHandle& nh);
-      // Reset the estimator
-    	void reset();
-    	// Publishing the intermediate results
-    	void publishResults(ros::Time timestamp);
+		// Initialize the estimator parameters
+    void initializeParameters(ros::NodeHandle& nh);
+    // Reset the estimator
+  	void reset();
+  	// Publishing the intermediate results
+  	void publishResults(ros::Time timestamp);
 
-      // Calls the underlying estimator, updating the estimate with the latest measurement
-      void updateEstimate(const Eigen::Vector3d& pos_measured, const Eigen::Quaterniond& quat_measured);
-      // Getter methods for estimates values
-  		Eigen::Vector3d getEstimatedPosition() const;
-  		Eigen::Vector3d getEstimatedVelocity() const;
-  		Eigen::Quaterniond getEstimatedOrientation() const;
-  		Eigen::Vector3d getEstimatedAngularVelocity() const;
+    // Calls the underlying estimator, updating the estimate with the latest measurement
+    void updateEstimate(const Eigen::Vector3d& pos_measured, const Eigen::Quaterniond& quat_measured);
+    // Getter methods for estimates values
+		Eigen::Vector3d getEstimatedPosition() const { viconEstimator_.getEstimatedPosition(); };
+		Eigen::Vector3d getEstimatedVelocity() const { viconEstimator_.getEstimatedVelocity(); };
+		Eigen::Quaterniond getEstimatedOrientation() const { viconEstimator_.getEstimatedOrientation(); };
+		Eigen::Vector3d getEstimatedAngularVelocity() const { viconEstimator_.getEstimatedAngularVelocity(); };
 
-    private:
-      // Underlying estimator
-    	ViconEstimator viconEstimator_ ;
-      // Publisher
-    	ros::Publisher publisher_;
+  private:
+    // Underlying estimator
+  	ViconEstimator viconEstimator_ ;
+    // Publisher
+  	ros::Publisher publisher_;
 
-  };
+};
 
     
 //}

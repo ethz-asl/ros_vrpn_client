@@ -73,7 +73,7 @@ vrpn_TRACKERCB prev_vrpn_data;
 //vrpn_TRACKERVELCB prev_vrpn_velocity_data;
 
 // Pointer to the vicon estimator
-ViconOdometryEstimator* pViconOdometryEstimator =  NULL; //vicon_estimation::
+ViconOdometryEstimator* viconOdometryEstimator =  NULL; //vicon_estimation::
 
 
 class Rigid_Body {
@@ -162,14 +162,11 @@ void VRPN_CALLBACK track_target(void *, const vrpn_TRACKERCB t) {
     ROS_WARN("Repeated Values");
 
   // Extracting the delta time between callbacks
-  std::cout << "delta time (s): " << (t.msg_time.tv_usec - prev_vrpn_data.msg_time.tv_usec) / 1000000.0 << std::endl;
-
-  // Storing current message for next callback
-  prev_vrpn_data = t;
-
-  const int kMicroSecToNanoSec = 1000;
+  //std::cout << "delta time (s): " << (t.msg_time.tv_usec - prev_vrpn_data.msg_time.tv_usec) / 1000000.0 << std::endl;
+  prev_vrpn_data = t;  
 
   // Somehow the vrpn msgs are in a different time zone.
+  const int kMicroSecToNanoSec = 1000;
   ros::Time timestamp_local = ros::Time::now();
   int timediff_sec = std::round(double(timestamp_local.sec - t.msg_time.tv_sec) / 3600) * 3600;
 
@@ -182,39 +179,36 @@ void VRPN_CALLBACK track_target(void *, const vrpn_TRACKERCB t) {
   }
 
   // Updating the estimates with the new measurements
-  pViconOdometryEstimator->updateEstimate(pos, q_rot);
-  pViconOdometryEstimator->publishResults(timestamp);
-  Eigen::Vector3d pos_hat = pViconOdometryEstimator->getEstimatedPosition();
-  Eigen::Vector3d vel_hat = pViconOdometryEstimator->getEstimatedVelocity();
-  Eigen::Quaterniond quat_hat = pViconOdometryEstimator->getEstimatedOrientation();
-  Eigen::Vector3d omega_hat = pViconOdometryEstimator->getEstimatedAngularVelocity();
-
+  viconOdometryEstimator->updateEstimate(pos, q_rot);
+  viconOdometryEstimator->publishResults(timestamp);
+  Eigen::Vector3d pos_hat = viconOdometryEstimator->getEstimatedPosition();
+  Eigen::Vector3d vel_hat = viconOdometryEstimator->getEstimatedVelocity();
+  Eigen::Quaterniond quat_hat = viconOdometryEstimator->getEstimatedOrientation();
+  Eigen::Vector3d omega_hat = viconOdometryEstimator->getEstimatedAngularVelocity();
 
   // Populating topic contents. Published in main loop
-  target_state->target.transform.translation.x = pos.x();
-  target_state->target.transform.translation.y = pos.y();
-  target_state->target.transform.translation.z = pos.z();
-
-  target_state->target.transform.rotation.x = q_rot.x();
-  target_state->target.transform.rotation.y = q_rot.y();
-  target_state->target.transform.rotation.z = q_rot.z();
-  target_state->target.transform.rotation.w = q_rot.w();
-
+  target_state->target.header.stamp = timestamp;
   target_state->target.header.frame_id = coordinate_system_string;
   target_state->target.child_frame_id = frame_id;
-  target_state->target.header.stamp = timestamp;
+  target_state->target.transform.translation.x = pos_hat.x();
+  target_state->target.transform.translation.y = pos_hat.y();
+  target_state->target.transform.translation.z = pos_hat.z();
+  target_state->target.transform.rotation.x = quat_hat.x();
+  target_state->target.transform.rotation.y = quat_hat.y();
+  target_state->target.transform.rotation.z = quat_hat.z();
+  target_state->target.transform.rotation.w = quat_hat.w();
 
   // Assemble odometry message.
   target_state->odometry.header.stamp = timestamp;
   target_state->odometry.header.frame_id = coordinate_system_string;
   target_state->odometry.child_frame_id = frame_id;
-  target_state->odometry.pose.pose.position.x = pos.x();
-  target_state->odometry.pose.pose.position.y = pos.y();
-  target_state->odometry.pose.pose.position.z = pos.z();
-  target_state->odometry.pose.pose.orientation.w = q_rot.w();
-  target_state->odometry.pose.pose.orientation.x = q_rot.x();
-  target_state->odometry.pose.pose.orientation.y = q_rot.y();
-  target_state->odometry.pose.pose.orientation.z = q_rot.z();
+  target_state->odometry.pose.pose.position.x = pos_hat.x();
+  target_state->odometry.pose.pose.position.y = pos_hat.y();
+  target_state->odometry.pose.pose.position.z = pos_hat.z();
+  target_state->odometry.pose.pose.orientation.w = quat_hat.w();
+  target_state->odometry.pose.pose.orientation.x = quat_hat.x();
+  target_state->odometry.pose.pose.orientation.y = quat_hat.y();
+  target_state->odometry.pose.pose.orientation.z = quat_hat.z();
   target_state->odometry.twist.twist.linear.x = vel_hat.x() ;
   target_state->odometry.twist.twist.linear.y = vel_hat.y() ;
   target_state->odometry.twist.twist.linear.z = vel_hat.z() ;
@@ -222,6 +216,7 @@ void VRPN_CALLBACK track_target(void *, const vrpn_TRACKERCB t) {
   target_state->odometry.twist.twist.angular.y = omega_hat.y() ;
   target_state->odometry.twist.twist.angular.z = omega_hat.z() ;
 
+  // Indicating to the main loop the data is ready for publishing 
   fresh_data = true;
 }
 
@@ -255,10 +250,9 @@ int main(int argc, char* argv[]) {
   }
 
   // Creating the estimator
-  ViconOdometryEstimator viconOdometryEstimator(nh);
-  pViconOdometryEstimator = &viconOdometryEstimator;
-  viconOdometryEstimator.initializeParameters(nh);
-  viconOdometryEstimator.reset();
+  viconOdometryEstimator = new ViconOdometryEstimator(nh);
+  viconOdometryEstimator->initializeParameters(nh);
+  viconOdometryEstimator->reset();
 
   // Creating object which handles data publishing
   Rigid_Body tool(nh, vrpn_server_ip, vrpn_port);

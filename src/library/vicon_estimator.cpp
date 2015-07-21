@@ -100,6 +100,7 @@ void TranslationalEstimator::reset()
 
 void TranslationalEstimator::setParameters(const TranslationalEstimatorParameters& translationalEstimatorParameters)
 {
+	estimator_parameters_.dt = translationalEstimatorParameters.dt;
 	estimator_parameters_.kp = translationalEstimatorParameters.kp;
 	estimator_parameters_.kv = translationalEstimatorParameters.kv;
 }

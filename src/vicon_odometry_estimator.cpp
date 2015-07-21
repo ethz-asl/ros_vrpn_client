@@ -14,16 +14,17 @@ void ViconOdometryEstimator::initializeParameters(ros::NodeHandle& nh)
 {
   // Recovering translational estimator parameters values from the parameter server
   TranslationalEstimatorParameters translationalEstimatorParameters;
+  nh.getParam("tranEst_dt", translationalEstimatorParameters.dt);
   nh.getParam("tranEst_kp", translationalEstimatorParameters.kp);
   nh.getParam("tranEst_kv", translationalEstimatorParameters.kv);
   // Recovering rotational estimator parameters values from the parameter server
   RotationalEstimatorParameters rotationalEstimatorParameters;
-  nh.getParam("dt", rotationalEstimatorParameters.dt);
-  nh.getParam("dQuat_hat_initialCovariance", rotationalEstimatorParameters.dQuat_hat_initialCovariance);
-  nh.getParam("dOmega_hat_initialCovariance", rotationalEstimatorParameters.dOmega_hat_initialCovariance);
-  nh.getParam("dQuat_processCovariance", rotationalEstimatorParameters.dQuat_processCovariance);
-  nh.getParam("dOmega_processCovariance", rotationalEstimatorParameters.dOmega_processCovariance);
-  nh.getParam("quat_measurementCovariance", rotationalEstimatorParameters.quat_measurementCovariance);
+  nh.getParam("rotEst_dt", rotationalEstimatorParameters.dt);
+  nh.getParam("rotEst_dQuat_hat_initialCovariance", rotationalEstimatorParameters.dQuat_hat_initialCovariance);
+  nh.getParam("rotEst_dOmega_hat_initialCovariance", rotationalEstimatorParameters.dOmega_hat_initialCovariance);
+  nh.getParam("rotEst_dQuat_processCovariance", rotationalEstimatorParameters.dQuat_processCovariance);
+  nh.getParam("rotEst_dOmega_processCovariance", rotationalEstimatorParameters.dOmega_processCovariance);
+  nh.getParam("rotEst_quat_measurementCovariance", rotationalEstimatorParameters.quat_measurementCovariance);
   // Setting parameters in estimator
   viconEstimator_.setParameters(translationalEstimatorParameters, rotationalEstimatorParameters);
 }

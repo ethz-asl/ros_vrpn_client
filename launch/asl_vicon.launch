@@ -3,13 +3,14 @@
   <node name="$(arg object_name)" type="ros_vrpn_client" pkg="ros_vrpn_client" output="screen">
     <param name="vrpn_server_ip" value="vicon" />
     <param name="vrpn_coordinate_system" value="vicon" />
+    <param name="tranEst_dt" value="0.01" />
     <param name="tranEst_kp" value="1.0" />
     <param name="tranEst_kv" value="10.0" />
-    <param name="dt" value="0.01" />
-    <param name="dQuat_hat_initialCovariance" value="1" />
-    <param name="dOmega_hat_initialCovariance" value="1" />
-    <param name="dQuat_processCovariance" value="0.01" />
-    <param name="dOmega_processCovariance" value="1" />
-    <param name="quat_measurementCovariance" value="0.0005" />
+    <param name="rotEst_dt" value="0.01" />
+    <param name="rotEst_dQuat_hat_initialCovariance" value="1" />
+    <param name="rotEst_dOmega_hat_initialCovariance" value="1" />
+    <param name="rotEst_dQuat_processCovariance" value="0.01" />
+    <param name="rotEst_dOmega_processCovariance" value="1" />
+    <param name="rotEst_quat_measurementCovariance" value="0.0005" />
   </node>
 </launch>

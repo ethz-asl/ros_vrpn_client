@@ -53,7 +53,7 @@ class ViconOdometryEstimator
 
   private:
     // Underlying estimator
-  	ViconEstimator viconEstimator_ ;
+  	ViconEstimator viconEstimator_;
     // Publisher
   	ros::Publisher publisher_;
 

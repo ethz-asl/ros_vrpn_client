@@ -209,12 +209,12 @@ void VRPN_CALLBACK track_target(void *, const vrpn_TRACKERCB t) {
   target_state->odometry.pose.pose.orientation.x = quat_hat.x();
   target_state->odometry.pose.pose.orientation.y = quat_hat.y();
   target_state->odometry.pose.pose.orientation.z = quat_hat.z();
-  target_state->odometry.twist.twist.linear.x = vel_hat.x() ;
-  target_state->odometry.twist.twist.linear.y = vel_hat.y() ;
-  target_state->odometry.twist.twist.linear.z = vel_hat.z() ;
-  target_state->odometry.twist.twist.angular.x = omega_hat.x() ;
-  target_state->odometry.twist.twist.angular.y = omega_hat.y() ;
-  target_state->odometry.twist.twist.angular.z = omega_hat.z() ;
+  target_state->odometry.twist.twist.linear.x = vel_hat.x();
+  target_state->odometry.twist.twist.linear.y = vel_hat.y();
+  target_state->odometry.twist.twist.linear.z = vel_hat.z();
+  target_state->odometry.twist.twist.angular.x = omega_hat.x();
+  target_state->odometry.twist.twist.angular.y = omega_hat.y();
+  target_state->odometry.twist.twist.angular.z = omega_hat.z();
 
   // Indicating to the main loop the data is ready for publishing 
   fresh_data = true;

@@ -15,22 +15,12 @@ cs_add_library(vicon_estimator
 )
 
 cs_add_library(vicon_odometry_estimator
-  src/vicon_odometry_estimator.cpp
+  src/wrapper/vicon_odometry_estimator.cpp
 )
 
 cs_add_executable(ros_vrpn_client 
 	src/ros_vrpn_client.cpp
 )
-
-# add_message_files(
-#   FILES
-#   est_rot.msg
-# )
-
-# generate_messages(
-#    DEPENDENCIES
-#    std_msgs
-# )
 
 target_link_libraries(vicon_odometry_estimator vicon_estimator)
 

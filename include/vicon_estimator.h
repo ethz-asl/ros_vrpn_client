@@ -24,7 +24,7 @@
 #include <Eigen/Geometry>
 
 
-//namespace vicon_estimation {
+namespace viconEstimator {
 
 // The parameter class for the translational estimator and parameter default values
 static const double dtTranslationalDefault = 0.01 ;
@@ -243,6 +243,6 @@ class ViconEstimator
 };
 
 
-//}
+}
 
 #endif // VICON_ESTIMATOR_H

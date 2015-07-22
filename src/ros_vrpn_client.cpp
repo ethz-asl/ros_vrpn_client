@@ -73,7 +73,7 @@ vrpn_TRACKERCB prev_vrpn_data;
 //vrpn_TRACKERVELCB prev_vrpn_velocity_data;
 
 // Pointer to the vicon estimator
-ViconOdometryEstimator* viconOdometryEstimator =  NULL; //vicon_estimation::
+viconEstimator::ViconOdometryEstimator* viconOdometryEstimator =  NULL; //vicon_estimation::
 
 
 class Rigid_Body {
@@ -186,6 +186,7 @@ void VRPN_CALLBACK track_target(void *, const vrpn_TRACKERCB t) {
   Eigen::Quaterniond quat_hat = viconOdometryEstimator->getEstimatedOrientation();
   Eigen::Vector3d omega_hat = viconOdometryEstimator->getEstimatedAngularVelocity();
 
+  //TODO: MOVE ALL THIS TO VICON ODOMETRY ESTIMATOR
   // Populating topic contents. Published in main loop
   target_state->target.header.stamp = timestamp;
   target_state->target.header.frame_id = coordinate_system_string;
@@ -250,7 +251,7 @@ int main(int argc, char* argv[]) {
   }
 
   // Creating the estimator
-  viconOdometryEstimator = new ViconOdometryEstimator(nh);
+  viconOdometryEstimator = new viconEstimator::ViconOdometryEstimator(nh);
   viconOdometryEstimator->initializeParameters(nh);
   viconOdometryEstimator->reset();
 

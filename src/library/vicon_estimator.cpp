@@ -1,7 +1,7 @@
 
 #include "vicon_estimator.h"
 
-//namespace vicon_estimation {
+namespace viconEstimator {
 
 /*
 * --------------------------------------------------------------------
@@ -317,4 +317,4 @@ void RotationalEstimator::updateEstimate_recombineErrorGlobal(Eigen::Matrix<doub
 
 
 
-//}
+}

@@ -27,7 +27,7 @@
 
 #include "vicon_estimator.h"
 
-//namespace vicon_estimation {
+namespace viconEstimator {
 
 class ViconOdometryEstimator
 {
@@ -53,14 +53,14 @@ class ViconOdometryEstimator
 
   private:
     // Underlying estimator
-  	ViconEstimator viconEstimator_;
+  	viconEstimator::ViconEstimator viconEstimator_;
     // Publisher
   	ros::Publisher publisher_;
 
 };
 
     
-//}
+}
 
 
 #endif // VICON_ODOMETRY_ESTIMATOR_H

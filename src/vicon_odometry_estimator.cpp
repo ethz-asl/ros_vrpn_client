@@ -1,7 +1,7 @@
 
 #include "vicon_odometry_estimator.h"
 
-//namespace vicon_estimation {
+namespace viconEstimator {
 
 ViconOdometryEstimator::ViconOdometryEstimator(ros::NodeHandle& nh) :
 	viconEstimator_()
@@ -13,12 +13,12 @@ ViconOdometryEstimator::ViconOdometryEstimator(ros::NodeHandle& nh) :
 void ViconOdometryEstimator::initializeParameters(ros::NodeHandle& nh)
 {
   // Recovering translational estimator parameters values from the parameter server
-  TranslationalEstimatorParameters translationalEstimatorParameters;
+  viconEstimator::TranslationalEstimatorParameters translationalEstimatorParameters;
   nh.getParam("tranEst_dt", translationalEstimatorParameters.dt);
   nh.getParam("tranEst_kp", translationalEstimatorParameters.kp);
   nh.getParam("tranEst_kv", translationalEstimatorParameters.kv);
   // Recovering rotational estimator parameters values from the parameter server
-  RotationalEstimatorParameters rotationalEstimatorParameters;
+  viconEstimator::RotationalEstimatorParameters rotationalEstimatorParameters;
   nh.getParam("rotEst_dt", rotationalEstimatorParameters.dt);
   nh.getParam("rotEst_dQuat_hat_initialCovariance", rotationalEstimatorParameters.dQuat_hat_initialCovariance);
   nh.getParam("rotEst_dOmega_hat_initialCovariance", rotationalEstimatorParameters.dOmega_hat_initialCovariance);
@@ -37,8 +37,8 @@ void ViconOdometryEstimator::reset()
 void ViconOdometryEstimator::publishResults(ros::Time timestamp)
 {
 
-  TranslationalEstimatorResults translationalEstimatorResults;
-  RotationalEstimatorResults rotationalEstimatorResults;
+  viconEstimator::TranslationalEstimatorResults translationalEstimatorResults;
+  viconEstimator::RotationalEstimatorResults rotationalEstimatorResults;
   viconEstimator_.getIntermediateResults(&translationalEstimatorResults, &rotationalEstimatorResults);
 
 	// Creating estimator message
@@ -97,4 +97,4 @@ void ViconOdometryEstimator::updateEstimate(const Eigen::Vector3d& pos_measured,
   viconEstimator_.updateEstimate(pos_measured, quat_measured);
 }
 
-//}
+}

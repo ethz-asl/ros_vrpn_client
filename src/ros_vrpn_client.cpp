@@ -42,7 +42,6 @@
 
 #include <vrpn_Connection.h>
 #include <vrpn_Tracker.h>
-
 #include <Eigen/Geometry>
 
 #include "vicon_odometry_estimator.h"
@@ -67,13 +66,12 @@ enum CoordinateSystem {
   optitrack
 } corrdinate_system;
 
-// set to true in the VRPN callback function.
+// Global indicating the availability of new VRPN callback function.
 bool fresh_data = false;
 vrpn_TRACKERCB prev_vrpn_data;
-//vrpn_TRACKERVELCB prev_vrpn_velocity_data;
 
-// Pointer to the vicon estimator
-viconEstimator::ViconOdometryEstimator* viconOdometryEstimator =  NULL; //vicon_estimation::
+// Pointer to the vicon estimator. Global such that it can be accessed from the callback
+viconEstimator::ViconOdometryEstimator* viconOdometryEstimator =  NULL;
 
 
 class Rigid_Body {
@@ -93,11 +91,11 @@ class Rigid_Body {
     std::string target_name = nh.getNamespace().substr(1);
     tracker = new vrpn_Tracker_Remote(target_name.c_str(), connection);
 
-	tracker->print_latest_report();
+	  tracker->print_latest_report();
     //std::cout<<"vel_id: "<<tracker->velocity_m_id<<std::endl;
     this->tracker->register_change_handler(NULL, track_target);
-//    this->tracker->register_change_handler(NULL, track_target_velocity);
-//    this->tracker->register_change_handler(NULL, track_target_acceleration);
+    //this->tracker->register_change_handler(NULL, track_target_velocity);
+    //this->tracker->register_change_handler(NULL, track_target_acceleration);
     tracker->print_latest_report();
   }
 

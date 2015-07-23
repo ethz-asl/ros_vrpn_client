@@ -1,5 +1,10 @@
 /*
- * Copyright 2015 Alexander Millane, ASL, ETH Zurich, Switzerland
+ * Copyright 2015 Alex Millane, ASL, ETH Zurich, Switzerland
+ * Copyright 2015 Fadri Furrer, ASL, ETH Zurich, Switzerland
+ * Copyright 2015 Michael Burri, ASL, ETH Zurich, Switzerland
+ * Copyright 2015 Mina Kamel, ASL, ETH Zurich, Switzerland
+ * Copyright 2015 Janosch Nikolic, ASL, ETH Zurich, Switzerland
+ * Copyright 2015 Markus Achtelik, ASL, ETH Zurich, Switzerland
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.

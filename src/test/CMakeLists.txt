@@ -1,0 +1,5 @@
+if (CATKIN_ENABLE_TESTING)
+  catkin_add_gtest(test_vicon_estimator test_vicon_estimator.cpp)
+  target_link_libraries(test_vicon_estimator ${catkin_LIBRARIES} vicon_estimator)
+  SET_TARGET_PROPERTIES(test_vicon_estimator PROPERTIES COMPILE_FLAGS "-std=c++11")
+endif()

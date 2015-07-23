@@ -22,6 +22,8 @@ cs_add_executable(ros_vrpn_client
 	src/ros_vrpn_client.cpp
 )
 
+add_subdirectory(src/test)
+
 target_link_libraries(vicon_odometry_estimator vicon_estimator)
 
 target_link_libraries(ros_vrpn_client pthread vicon_odometry_estimator)

@@ -27,6 +27,7 @@
 #include <Eigen/Geometry>
 
 #include "vicon_estimator.h"
+#include "test_helper_library.h"
 
 // Translational trajectory defines
 #define TRANS_TRAJECTORY_PERIOD 10.0
@@ -52,6 +53,23 @@
 #define QUAT_ERROR_THRESHOLD 0.005
 #define OMEGA_ERROR_THRESHOLD 1.0
 
+
+/*
+ *  Helper Function Tests
+ */
+
+/*TEST(helperFunctions, euler2Quat)
+{
+  //
+  double roll = 1.0/2.0*M_PI ;
+  double pitch = 0.0 ;
+  double yaw = 0.0 ;
+  void euler2quat(double roll, double pitch, double yaw, double* q1, double* q2, double* q3, double* q4);
+
+
+}*/
+
+
 /*
  *	Translational Estimator Tests
  */
@@ -74,28 +92,7 @@ void generateTranslationalTrajectorySinusoidal(double posTrajectory[][3], double
   }
 }
 
-void calculate3dRmsError(double truth[][3], double est[][3], const int trajectoryLength, const int startIndex, double* error)
-{
-  // Looping over trajectories summing squared errors
-  double errorSum[3] = { 0.0, 0.0, 0.0 };
-  for (int i = startIndex; i < trajectoryLength; i++)
-  {
-    errorSum[0] += pow(truth[i][0] - est[i][0], 2);
-    errorSum[1] += pow(truth[i][1] - est[i][1], 2);
-    errorSum[2] += pow(truth[i][2] - est[i][2], 2);
-  }
-  // Averaging
-  int numSamples = trajectoryLength - startIndex + 1;
-  errorSum[0] /= numSamples;
-  errorSum[1] /= numSamples;
-  errorSum[2] /= numSamples;
-  // Square rooting to obtain RMS
-  error[0] = sqrt(errorSum[0]);
-  error[1] = sqrt(errorSum[1]);
-  error[2] = sqrt(errorSum[2]);
-}
-
-TEST(translationalEstimator, sinusoidal_clear)
+TEST(translationalEstimator, sinusoidal_clean)
 {
   // Creating the estimator
   viconEstimator::TranslationalEstimator translationalEstimator;
@@ -189,58 +186,6 @@ TEST(translationalEstimator, sinusoidal_clear)
  *	Rotational Estimator Tests
  */
 
-void euler2quat(double roll, double pitch, double yaw, double* q1, double* q2, double* q3, double* q4)
-{
-  double cos_z_2 = cos(yaw * 0.5);
-  double cos_y_2 = cos(pitch * 0.5);
-  double cos_x_2 = cos(roll * 0.5);
-
-  double sin_z_2 = sin(yaw * 0.5);
-  double sin_y_2 = sin(pitch * 0.5);
-  double sin_x_2 = sin(roll * 0.5);
-
-  // compute quaternion
-  *q1 = cos_z_2 * cos_y_2 * cos_x_2 + sin_z_2 * sin_y_2 * sin_x_2;
-  *q2 = cos_z_2 * cos_y_2 * sin_x_2 - sin_z_2 * sin_y_2 * cos_x_2;
-  *q3 = cos_z_2 * sin_y_2 * cos_x_2 + sin_z_2 * cos_y_2 * sin_x_2;
-  *q4 = sin_z_2 * cos_y_2 * cos_x_2 - cos_z_2 * sin_y_2 * sin_x_2;
-}
-
-void calculateQuatRmsError(double truth[][4], double est[][4], const int trajectoryLength, const int startIndex, double* error)
-{
-  // Generating the error trajectory
-  double errorTrajectory[trajectoryLength][3];
-  for (int i = 0; i < trajectoryLength; i++)
-  {
-    // Turning vectors into quaternions
-    Eigen::Quaterniond truthQuat(truth[i][0], truth[i][1], truth[i][2], truth[i][3]);
-    Eigen::Quaterniond estQuat(est[i][0], est[i][1], est[i][2], est[i][3]);
-    // Calculating the error quaternion
-    Eigen::Quaterniond errorQuat = estQuat.inverse() * truthQuat;
-    // Extracting the three meaningful components of the error quaternion
-    errorTrajectory[i][0] = errorQuat.x();
-    errorTrajectory[i][1] = errorQuat.y();
-    errorTrajectory[i][2] = errorQuat.z();
-  }
-
-  // Looping over trajectories summing squared errors
-  double errorSum[3] = { 0.0, 0.0, 0.0 };
-  for (int i = startIndex; i < trajectoryLength; i++)
-  {
-    errorSum[0] += pow(errorTrajectory[i][0], 2);
-    errorSum[1] += pow(errorTrajectory[i][1], 2);
-    errorSum[2] += pow(errorTrajectory[i][2], 2);
-  }
-  // Averaging
-  int numSamples = trajectoryLength - startIndex + 1;
-  errorSum[0] /= numSamples;
-  errorSum[1] /= numSamples;
-  errorSum[2] /= numSamples;
-  // Square rooting to obtain RMS
-  error[0] = sqrt(errorSum[0]);
-  error[1] = sqrt(errorSum[1]);
-  error[2] = sqrt(errorSum[2]);
-}
 
 void generateRotationalTrajectorySinusoidal(double quatTrajectory[][4], double omegaTrajectory[][3], const int trajectoryLength)
 {
@@ -252,7 +197,7 @@ void generateRotationalTrajectorySinusoidal(double quatTrajectory[][4], double o
     pitch = ROT_TRAJECTORY_AMPLITUDE * sin( 2 * M_PI * i * ROT_TRAJECTORY_DT * ROT_TRAJECTORY_FREQ + ROT_TRAJECTORY_PHASE_OFFSET_Y);
     yaw = ROT_TRAJECTORY_AMPLITUDE * sin( 2 * M_PI * i * ROT_TRAJECTORY_DT * ROT_TRAJECTORY_FREQ + ROT_TRAJECTORY_PHASE_OFFSET_Z);
     // Converting to quaternions
-    euler2quat(roll, pitch, yaw, &quatTrajectory[i][0], &quatTrajectory[i][1], &quatTrajectory[i][2], &quatTrajectory[i][3]);
+    euler2quat(roll, pitch, yaw, quatTrajectory[i]);
   }
 
   // Generating the omega trajectories through numeric differentiation

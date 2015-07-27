@@ -34,17 +34,17 @@ void ViconOdometryEstimator::initializeParameters(ros::NodeHandle& nh)
 {
   // Recovering translational estimator parameters values from the parameter server
   viconEstimator::TranslationalEstimatorParameters translationalEstimatorParameters;
-  nh.getParam("tranEst_dt", translationalEstimatorParameters.dt);
-  nh.getParam("tranEst_kp", translationalEstimatorParameters.kp);
-  nh.getParam("tranEst_kv", translationalEstimatorParameters.kv);
+  nh.getParam("translational_estimator/dt", translationalEstimatorParameters.dt);
+  nh.getParam("translational_estimator/kp", translationalEstimatorParameters.kp);
+  nh.getParam("translational_estimator/kv", translationalEstimatorParameters.kv);
   // Recovering rotational estimator parameters values from the parameter server
   viconEstimator::RotationalEstimatorParameters rotationalEstimatorParameters;
-  nh.getParam("rotEst_dt", rotationalEstimatorParameters.dt);
-  nh.getParam("rotEst_dQuat_hat_initialCovariance", rotationalEstimatorParameters.dQuatHatInitialCovariance);
-  nh.getParam("rotEst_dOmega_hat_initialCovariance", rotationalEstimatorParameters.dOmegaHatInitialCovariance);
-  nh.getParam("rotEst_dQuat_processCovariance",rotationalEstimatorParameters.dQuatProcessCovariance);
-  nh.getParam("rotEst_dOmega_processCovariance",rotationalEstimatorParameters.dOmegaProcessCovariance);
-  nh.getParam("rotEst_quat_measurementCovariance", rotationalEstimatorParameters.quatMeasurementCovariance);
+  nh.getParam("rotational_estimator/dt", rotationalEstimatorParameters.dt);
+  nh.getParam("rotational_estimator/orientation_estimate_initial_covariance", rotationalEstimatorParameters.dQuatHatInitialCovariance);
+  nh.getParam("rotational_estimator/roll_rate_estimate_initial_covariance", rotationalEstimatorParameters.dOmegaHatInitialCovariance);
+  nh.getParam("rotational_estimator/orientation_process_covariance",rotationalEstimatorParameters.dQuatProcessCovariance);
+  nh.getParam("rotational_estimator/roll_rate_process_covariance",rotationalEstimatorParameters.dOmegaProcessCovariance);
+  nh.getParam("rotational_estimator/orientation_measurementCovariance", rotationalEstimatorParameters.quatMeasurementCovariance);
   // Setting parameters in estimator
   viconEstimator_.setParameters(translationalEstimatorParameters, rotationalEstimatorParameters);
 }

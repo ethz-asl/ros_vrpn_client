@@ -46,6 +46,11 @@
 #include "vicon_odometry_estimator.h"
 
 void VRPN_CALLBACK track_target(void *, const vrpn_TRACKERCB t);
+
+// TODO(millanea@ethz.ch): The following callbacks should be implemented in the case that
+//                         the tracking system supports them. In this case a flag should be
+//                         added to the code indicating the whether or not the vicon estimator
+//                         should be run.
 //void VRPN_CALLBACK track_target_velocity(void *, const vrpn_TRACKERVELCB tv);
 //void VRPN_CALLBACK track_target_acceleration(void *, const vrpn_TRACKERACCCB ta);
 
@@ -64,7 +69,7 @@ enum CoordinateSystem
 {
   vicon,
   optitrack
-} corrdinate_system;
+} coordinate_system;
 
 // Global indicating the availability of new VRPN callback function.
 bool freshData = false;
@@ -93,10 +98,13 @@ class Rigid_Body
     tracker = new vrpn_Tracker_Remote(targetName.c_str(), connection);
 
     tracker->print_latest_report();
-    //std::cout<<"vel_id: "<<tracker->velocity_m_id<<std::endl;
     this->tracker->register_change_handler(NULL, track_target);
+
+    // TODO(millanea@ethz.ch): The following callbacks should be added if they're available.
+    //                         See detailed note above.
     //this->tracker->register_change_handler(NULL, track_target_velocity);
     //this->tracker->register_change_handler(NULL, track_target_acceleration);
+
     tracker->print_latest_report();
   }
 
@@ -118,6 +126,9 @@ class Rigid_Body
   }
 };
 
+
+// TODO(millanea@ethz.ch): The following callbacks should be implemented if they're required.
+//                         See detailed note above.
 //void VRPN_CALLBACK track_target_acceleration(void *, const vrpn_TRACKERACCCB ta) {
 //	std::cout<<"acceleration_callback"<<std::endl;
 //	std::cout<<"ta.vel[0]"<<ta.acc[0]<<std::endl;
@@ -136,14 +147,13 @@ void VRPN_CALLBACK track_target(void *, const vrpn_TRACKERCB t)
 
   Eigen::Quaterniond qRot;
   Eigen::Vector3d pos;
-  switch (corrdinate_system)
+  switch (coordinate_system)
   {
     case optitrack:
     {
-      // optitrak <-- funky <-- object
-      // the q_fix.inverse() esures that when optitrak_funky says 0 0 0
-      // for roll pitch yaw, there is still a rotation that aligns the
-      // object frame with the /optitrak frame (and not /optitrak_funky)
+      // Here we rotate the Optitrack measured quaternion by qFix, a
+      // Pi/2 rotation around the x-axis. By doing so we convert from
+      // NED to ENU (I think).
       qRot = qFix * qOrig * qFix.inverse();
       pos = Eigen::Vector3d(t.pos[0], -t.pos[2], t.pos[1]);
       break;
@@ -167,9 +177,6 @@ void VRPN_CALLBACK track_target(void *, const vrpn_TRACKERCB t)
       and prevVrpnData.pos[0] == t.pos[0] and prevVrpnData.pos[1] == t.pos[1]
       and prevVrpnData.pos[2] == t.pos[2])
     ROS_WARN("Repeated Values");
-
-  // Extracting the delta time between callbacks
-  //std::cout << "delta time (s): " << (t.msg_time.tv_usec - prev_vrpn_data.msg_time.tv_usec) / 1000000.0 << std::endl;
   prevVrpnData = t;
 
   // Somehow the vrpn msgs are in a different time zone.

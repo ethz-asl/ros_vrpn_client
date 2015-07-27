@@ -202,27 +202,27 @@ class RotationalEstimator
   // Function to generate a skew symmetric matrix from a vector
   Eigen::Matrix3d skewMatrix(const Eigen::Vector3d& vec) const;
   //
-  void updateEstimatePropagateGlobalEstimate(Eigen::Matrix<double, 7, 1>* xPriori,
-                                              const Eigen::Matrix<double, 7, 1>& xOld);  //ros_vrpn_client::rotationalEstimator* msg
+  void updateEstimatePropagateGlobalEstimate( const Eigen::Matrix<double, 7, 1>& xOld,
+                                              Eigen::Matrix<double, 7, 1>* xPriori);
 
-  void updateEstimatePropagateErrorEstimate(Eigen::Matrix<double, 6, 1>* dxPriori,
-                                             const Eigen::Matrix<double, 6, 1>& dxOld,
-                                             const Eigen::Matrix<double, 7, 1>& xOld);  //ros_vrpn_client::rotationalEstimator* msg
+  void updateEstimatePropagateErrorEstimate( const Eigen::Matrix<double, 6, 1>& dxOld,
+                                             const Eigen::Matrix<double, 7, 1>& xOld,
+                                             Eigen::Matrix<double, 6, 1>* dxPriori);
 
-  void updateEstimatePropagateErrorCovariance(Eigen::Matrix<double, 6, 6>* covPriori,
-                                               Eigen::Matrix<double, 6, 6>& covOld,
-                                               const Eigen::Matrix<double, 7, 1>& xOld);  //ros_vrpn_client::rotationalEstimator* msg
+  void updateEstimatePropagateErrorCovariance( Eigen::Matrix<double, 6, 6>& covOld,
+                                               const Eigen::Matrix<double, 7, 1>& xOld,
+                                               Eigen::Matrix<double, 6, 6>* covPriori);
 
-  void updateEstimateUpdateErrorEstimate(Eigen::Matrix<double, 6, 1>* dxMeasurement,
-                                          Eigen::Matrix<double, 6, 6>* covMeasurement,
-                                          const Eigen::Quaterniond& quatMeasured,
+  void updateEstimateUpdateErrorEstimate( const Eigen::Quaterniond& quatMeasured,
                                           const Eigen::Matrix<double, 7, 1>& xPriori,
                                           const Eigen::Matrix<double, 6, 1>& dxPriori,
-                                          const Eigen::Matrix<double, 6, 6>& covPriori);  //ros_vrpn_client::rotationalEstimator* msg
+                                          const Eigen::Matrix<double, 6, 6>& covPriori,
+                                          Eigen::Matrix<double, 6, 1>* dxMeasurement,
+                                          Eigen::Matrix<double, 6, 6>* covMeasurement);
 
-  void updateEstimateRecombineErrorGlobal(Eigen::Matrix<double, 7, 1>* xMeasurement,
-                                           Eigen::Matrix<double, 6, 1>* dxMeasurement,
-                                           const Eigen::Matrix<double, 7, 1> xPriori);  // ros_vrpn_client::rotationalEstimator* msg
+  void updateEstimateRecombineErrorGlobal(  const Eigen::Matrix<double, 7, 1> xPriori,
+                                            Eigen::Matrix<double, 7, 1>* xMeasurement,
+                                            Eigen::Matrix<double, 6, 1>* dxMeasurement);
 };
 
 class ViconEstimator
@@ -241,8 +241,8 @@ class ViconEstimator
   void setParameters(const TranslationalEstimatorParameters& translationalEstimatorParameters,
                      const RotationalEstimatorParameters& rotationalEstimatorParameters);
   // Get intermediate results
-  void getIntermediateResults(TranslationalEstimatorResults* translationalEstimatorResults,
-                              RotationalEstimatorResults* rotationalEstimatorResults);
+  void getIntermediateResults ( TranslationalEstimatorResults* translationalEstimatorResults,
+                                RotationalEstimatorResults* rotationalEstimatorResults) const ;
 
   // Functions providing access to the various estimates
   Eigen::Vector3d getEstimatedPosition() const { return translationalEstimator_.getEstimatedPosition(); }

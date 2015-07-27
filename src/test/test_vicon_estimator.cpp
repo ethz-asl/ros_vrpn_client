@@ -74,7 +74,7 @@ void generateTranslationalTrajectorySinusoidal(double posTrajectory[][3], double
   }
 }
 
-void calculate3dRmsError(double* error, double truth[][3], double est[][3], const int trajectoryLength, const int startIndex)
+void calculate3dRmsError(double truth[][3], double est[][3], const int trajectoryLength, const int startIndex, double* error)
 {
   // Looping over trajectories summing squared errors
   double errorSum[3] = { 0.0, 0.0, 0.0 };
@@ -139,7 +139,7 @@ TEST(translationalEstimator, sinusoidal_clear)
 
   // Calculating position estimate errors
   double posError[3];
-  calculate3dRmsError(posError, posTrajectory, posEstTrajectory, trajectoryLength, startIndex);
+  calculate3dRmsError(posTrajectory, posEstTrajectory, trajectoryLength, startIndex, posError);
 
   // Performing test
   EXPECT_NEAR(posError[0], 0, POS_ERROR_THRESHOLD) << "X position estimate error too great";
@@ -148,7 +148,7 @@ TEST(translationalEstimator, sinusoidal_clear)
 
   // Calculating velocity estimate errors
   double velError[3];
-  calculate3dRmsError(velError, velTrajectory, velEstTrajectory, trajectoryLength, startIndex);
+  calculate3dRmsError(velTrajectory, velEstTrajectory, trajectoryLength, startIndex, velError);
 
   // Performing test
   EXPECT_NEAR(velError[0], 0, VEL_ERROR_THRESHOLD) << "X velocity estimate error too great";
@@ -206,7 +206,7 @@ void euler2quat(double roll, double pitch, double yaw, double* q1, double* q2, d
   *q4 = sin_z_2 * cos_y_2 * cos_x_2 - cos_z_2 * sin_y_2 * sin_x_2;
 }
 
-void calculate3dRmsError(double* error, double truth[][4], double est[][4], const int trajectoryLength, const int startIndex)
+void calculateQuatRmsError(double truth[][4], double est[][4], const int trajectoryLength, const int startIndex, double* error)
 {
   // Generating the error trajectory
   double errorTrajectory[trajectoryLength][3];
@@ -320,7 +320,7 @@ TEST(rotationalEstimator, sinusoidal_clean)
 
   // Calculating position estimate errors
   double quatError[3];
-  calculate3dRmsError(quatError, quatTrajectory, quatEstTrajectory, trajectoryLength, startIndex);
+  calculateQuatRmsError(quatTrajectory, quatEstTrajectory, trajectoryLength, startIndex, quatError);
 
   // Performing test
   EXPECT_NEAR(quatError[0], 0, QUAT_ERROR_THRESHOLD) << "X errorquaternion estimate error too great";
@@ -329,8 +329,8 @@ TEST(rotationalEstimator, sinusoidal_clean)
 
   // Calculating velocity estimate errors
   double omegaError[3];
-  calculate3dRmsError(omegaError, omegaTrajectory, omegaEstTrajectory, trajectoryLength,
-                      startIndex);
+  calculate3dRmsError(omegaTrajectory, omegaEstTrajectory, trajectoryLength,
+                      startIndex, omegaError);
 
   // Performing test
   EXPECT_NEAR(omegaError[0], 0, OMEGA_ERROR_THRESHOLD) << "X rotational velocity estimate error too great";

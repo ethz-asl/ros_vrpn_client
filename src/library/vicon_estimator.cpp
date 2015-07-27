@@ -59,9 +59,9 @@ void ViconEstimator::setParameters(
   rotationalEstimator_.setParameters(rotationalEstimatorParameters);
 }
 
-void ViconEstimator::getIntermediateResults(
+void ViconEstimator::getIntermediateResults (
     TranslationalEstimatorResults* translationalEstimatorResults,
-    RotationalEstimatorResults* rotationalEstimatorResults)
+    RotationalEstimatorResults* rotationalEstimatorResults) const
 {
   *translationalEstimatorResults = translationalEstimator_.getResults();
   *rotationalEstimatorResults = rotationalEstimator_.getResults();
@@ -193,28 +193,28 @@ void RotationalEstimator::updateEstimate(const Eigen::Quaterniond& quatMeasured)
   Eigen::Matrix<double, 7, 1> x_old;
   Eigen::Matrix<double, 7, 1> x_p;
   x_old << quatHat_.coeffs(), omegaHat_;
-  updateEstimatePropagateGlobalEstimate(&x_p, x_old);
+  updateEstimatePropagateGlobalEstimate(x_old, &x_p);
 
   // Propagating the error state estimate
   Eigen::Matrix<double, 6, 1> dx_old;
   Eigen::Matrix<double, 6, 1> dx_p;
   dx_old << dQuatHat_, dOmegaHat_;
-  updateEstimatePropagateErrorEstimate(&dx_p, dx_old, x_old);
+  updateEstimatePropagateErrorEstimate(dx_old, x_old, &dx_p);
 
   // Propagating the estimate covariance
   Eigen::Matrix<double, 6, 6> P_old;
   Eigen::Matrix<double, 6, 6> P_p;
   P_old = covariance_;
-  updateEstimatePropagateErrorCovariance(&P_p, P_old, x_old);
+  updateEstimatePropagateErrorCovariance(P_old, x_old, &P_p);
 
   // Measurement Update
   Eigen::Matrix<double, 6, 1> dx_m;
   Eigen::Matrix<double, 6, 6> P_m;
-  updateEstimateUpdateErrorEstimate(&dx_m, &P_m, quatMeasured, x_p, dx_p, P_p);
+  updateEstimateUpdateErrorEstimate(quatMeasured, x_p, dx_p, P_p, &dx_m, &P_m);
 
   // Global state correction
   Eigen::Matrix<double, 7, 1> x_m;
-  updateEstimateRecombineErrorGlobal(&x_m, &dx_m, x_p);
+  updateEstimateRecombineErrorGlobal(x_p, &x_m, &dx_m);
 
   // Extracting estimated quantities from the posteriori state
   quatHat_ = Eigen::Quaterniond(x_m.block<4, 1>(0, 0));
@@ -235,7 +235,8 @@ Eigen::Matrix3d RotationalEstimator::skewMatrix(const Eigen::Vector3d& vec) cons
 }
 
 void RotationalEstimator::updateEstimatePropagateGlobalEstimate(
-    Eigen::Matrix<double, 7, 1>* x_p, const Eigen::Matrix<double, 7, 1>& xOld)
+    const Eigen::Matrix<double, 7, 1>& xOld,
+    Eigen::Matrix<double, 7, 1>* x_p)
 {
   // Extracting components of the state
   Eigen::Quaterniond quatHatOld = Eigen::Quaterniond(xOld.block<4, 1>(0, 0));
@@ -251,8 +252,9 @@ void RotationalEstimator::updateEstimatePropagateGlobalEstimate(
 }
 
 void RotationalEstimator::updateEstimatePropagateErrorEstimate(
-    Eigen::Matrix<double, 6, 1>* dx_p, const Eigen::Matrix<double, 6, 1>& dxOld,
-    const Eigen::Matrix<double, 7, 1>& xOld)
+    const Eigen::Matrix<double, 6, 1>& dxOld,
+    const Eigen::Matrix<double, 7, 1>& xOld,
+    Eigen::Matrix<double, 6, 1>* dx_p)
 {
   // Extracting components of the states
   Eigen::Quaterniond quatHat = Eigen::Quaterniond(xOld.block<4, 1>(0, 0));
@@ -269,8 +271,9 @@ void RotationalEstimator::updateEstimatePropagateErrorEstimate(
 }
 
 void RotationalEstimator::updateEstimatePropagateErrorCovariance(
-    Eigen::Matrix<double, 6, 6>* P_p, Eigen::Matrix<double, 6, 6>& covOld,
-    const Eigen::Matrix<double, 7, 1>& xOld)
+    Eigen::Matrix<double, 6, 6>& covOld,
+    const Eigen::Matrix<double, 7, 1>& xOld,
+    Eigen::Matrix<double, 6, 6>* P_p)
 {
   // Extracting components of the state
   Eigen::Quaterniond quatHat = Eigen::Quaterniond(xOld.block<4, 1>(0, 0));
@@ -285,9 +288,12 @@ void RotationalEstimator::updateEstimatePropagateErrorCovariance(
 }
 
 void RotationalEstimator::updateEstimateUpdateErrorEstimate(
-    Eigen::Matrix<double, 6, 1>* dx_m, Eigen::Matrix<double, 6, 6>* covMeasurement,
-    const Eigen::Quaterniond& quatMeasured, const Eigen::Matrix<double, 7, 1>& xPriori,
-    const Eigen::Matrix<double, 6, 1>& dxPriori, const Eigen::Matrix<double, 6, 6>& covPriori)
+    const Eigen::Quaterniond& quatMeasured,
+    const Eigen::Matrix<double, 7, 1>& xPriori,
+    const Eigen::Matrix<double, 6, 1>& dxPriori,
+    const Eigen::Matrix<double, 6, 6>& covPriori,
+    Eigen::Matrix<double, 6, 1>* dx_m,
+    Eigen::Matrix<double, 6, 6>* covMeasurement)
 {
   // Extracting components of the state
   Eigen::Quaterniond quatHatPriori = Eigen::Quaterniond(xPriori.block<4, 1>(0, 0));
@@ -313,9 +319,9 @@ void RotationalEstimator::updateEstimateUpdateErrorEstimate(
   //*P_m = (Eigen::Matrix<double, 6, 6>::Identity() - K*H)*P_p*((Eigen::Matrix<double, 6, 6>::Identity() - K*H).transpose()) + K*measurementCovariance*K.transpose();
 }
 
-void RotationalEstimator::updateEstimateRecombineErrorGlobal(Eigen::Matrix<double, 7, 1>* xMeasurement,
-                                                              Eigen::Matrix<double, 6, 1>* dxMeasurement,
-                                                              const Eigen::Matrix<double, 7, 1> xPriori)
+void RotationalEstimator::updateEstimateRecombineErrorGlobal( const Eigen::Matrix<double, 7, 1> xPriori,
+                                                              Eigen::Matrix<double, 7, 1>* xMeasurement,
+                                                              Eigen::Matrix<double, 6, 1>* dxMeasurement)
 {
   // Extracting components of the state
   Eigen::Quaterniond quatHatPriori = Eigen::Quaterniond(xPriori.block<4, 1>(0, 0));

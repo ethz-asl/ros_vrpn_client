@@ -12,9 +12,6 @@ include_directories(${Eigen_INCLUDE_DIRS})
 
 cs_add_library(vicon_estimator
   src/library/vicon_estimator.cpp
-)
-
-cs_add_library(vicon_odometry_estimator
   src/wrapper/vicon_odometry_estimator.cpp
 )
 
@@ -24,9 +21,8 @@ cs_add_executable(ros_vrpn_client
 
 add_subdirectory(src/test)
 
-target_link_libraries(vicon_odometry_estimator vicon_estimator)
 
-target_link_libraries(ros_vrpn_client pthread vicon_odometry_estimator)
+target_link_libraries(ros_vrpn_client pthread vicon_estimator)
 
 cs_install()
 cs_export()

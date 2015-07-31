@@ -71,86 +71,87 @@
 
 
 /*
- *	Translational Estimator Tests
+ *  Translational Estimator Tests
  */
 
-void generateTranslationalTrajectorySinusoidal(double posTrajectory[][3], double velTrajectory[][3], const int trajectoryLength)
+void generateTranslationalTrajectorySinusoidal(double position_trajectory[][3], double velocity_trajectory[][3], const int trajectory_length)
 {
   // Generating position trajectories
-  for (int i = 0; i < trajectoryLength; i++)
+  for (int i = 0; i < trajectory_length; i++)
   {
-    posTrajectory[i][0] = TRANS_TRAJECTORY_AMPLITUDE * sin( 2 * M_PI * i * TRANS_TRAJECTORY_DT * TRANS_TRAJECTORY_FREQ + TRANS_TRAJECTORY_PHASE_OFFSET_X);
-    posTrajectory[i][1] = TRANS_TRAJECTORY_AMPLITUDE * sin( 2 * M_PI * i * TRANS_TRAJECTORY_DT * TRANS_TRAJECTORY_FREQ + TRANS_TRAJECTORY_PHASE_OFFSET_Y);
-    posTrajectory[i][2] = TRANS_TRAJECTORY_AMPLITUDE * sin( 2 * M_PI * i * TRANS_TRAJECTORY_DT * TRANS_TRAJECTORY_FREQ + TRANS_TRAJECTORY_PHASE_OFFSET_Z);
+    position_trajectory[i][0] = TRANS_TRAJECTORY_AMPLITUDE * sin( 2 * M_PI * i * TRANS_TRAJECTORY_DT * TRANS_TRAJECTORY_FREQ + TRANS_TRAJECTORY_PHASE_OFFSET_X);
+    position_trajectory[i][1] = TRANS_TRAJECTORY_AMPLITUDE * sin( 2 * M_PI * i * TRANS_TRAJECTORY_DT * TRANS_TRAJECTORY_FREQ + TRANS_TRAJECTORY_PHASE_OFFSET_Y);
+    position_trajectory[i][2] = TRANS_TRAJECTORY_AMPLITUDE * sin( 2 * M_PI * i * TRANS_TRAJECTORY_DT * TRANS_TRAJECTORY_FREQ + TRANS_TRAJECTORY_PHASE_OFFSET_Z);
   }
   // Generating velocity trajectories from algebraic differentiation
-  for (int i = 0; i < trajectoryLength; i++)
+  for (int i = 0; i < trajectory_length; i++)
   {
-    velTrajectory[i][0] = 2 * M_PI * TRANS_TRAJECTORY_FREQ * cos( 2 * M_PI * i * TRANS_TRAJECTORY_DT * TRANS_TRAJECTORY_FREQ + TRANS_TRAJECTORY_PHASE_OFFSET_X);
-    velTrajectory[i][1] = 2 * M_PI * TRANS_TRAJECTORY_FREQ * cos( 2 * M_PI * i * TRANS_TRAJECTORY_DT * TRANS_TRAJECTORY_FREQ + TRANS_TRAJECTORY_PHASE_OFFSET_Y);
-    velTrajectory[i][2] = 2 * M_PI * TRANS_TRAJECTORY_FREQ * cos( 2 * M_PI * i * TRANS_TRAJECTORY_DT * TRANS_TRAJECTORY_FREQ + TRANS_TRAJECTORY_PHASE_OFFSET_Z);
+    velocity_trajectory[i][0] = 2 * M_PI * TRANS_TRAJECTORY_FREQ * cos( 2 * M_PI * i * TRANS_TRAJECTORY_DT * TRANS_TRAJECTORY_FREQ + TRANS_TRAJECTORY_PHASE_OFFSET_X);
+    velocity_trajectory[i][1] = 2 * M_PI * TRANS_TRAJECTORY_FREQ * cos( 2 * M_PI * i * TRANS_TRAJECTORY_DT * TRANS_TRAJECTORY_FREQ + TRANS_TRAJECTORY_PHASE_OFFSET_Y);
+    velocity_trajectory[i][2] = 2 * M_PI * TRANS_TRAJECTORY_FREQ * cos( 2 * M_PI * i * TRANS_TRAJECTORY_DT * TRANS_TRAJECTORY_FREQ + TRANS_TRAJECTORY_PHASE_OFFSET_Z);
   }
 }
 
 TEST(translationalEstimator, sinusoidal_clean)
 {
   // Creating the estimator
-  viconEstimator::TranslationalEstimator translationalEstimator;
+  vicon_estimator::TranslationalEstimator translational_estimator;
 
   // Setting the estimator gains
-  viconEstimator::TranslationalEstimatorParameters translationalEstimatorParameters;
-  translationalEstimatorParameters.dt = TRANS_TRAJECTORY_DT;
-  translationalEstimatorParameters.kp = 1.0;
-  translationalEstimatorParameters.kv = 10 * 10.0;
-  translationalEstimator.setParameters(translationalEstimatorParameters);
-  translationalEstimator.reset();
+  vicon_estimator::TranslationalEstimatorParameters translational_estimator_parameters;
+  translational_estimator_parameters.dt_ = TRANS_TRAJECTORY_DT;
+  translational_estimator_parameters.kp_ = 1.0;
+  translational_estimator_parameters.kv_ = 10 * 10.0;
+  translational_estimator.setParameters(translational_estimator_parameters);
+  translational_estimator.reset();
 
   // Generating the trajectory over which to test the estimator
-  const int trajectoryLength = static_cast<int>(TRANS_TRAJECTORY_PERIOD / TRANS_TRAJECTORY_DT) + 1;
-  double posTrajectory[trajectoryLength][3], velTrajectory[trajectoryLength][3];
-  generateTranslationalTrajectorySinusoidal(posTrajectory, velTrajectory, trajectoryLength);
+  const int trajectory_length = static_cast<int>(TRANS_TRAJECTORY_PERIOD / TRANS_TRAJECTORY_DT) + 1;
+  double position_trajectory[trajectory_length][3];
+  double velocity_trajectory[trajectory_length][3];
+  generateTranslationalTrajectorySinusoidal(position_trajectory, velocity_trajectory, trajectory_length);
 
   // Looping over trajectory and retrieving estimates
-  double posEstTrajectory[trajectoryLength][3];
-  double velEstTrajectory[trajectoryLength][3];
-  for (int i = 0; i < trajectoryLength; i++)
+  double position_trajectory_estimate[trajectory_length][3];
+  double velocity_trajectory_estimate[trajectory_length][3];
+  for (int i = 0; i < trajectory_length; i++)
   {
     // Constructing input
-    Eigen::Vector3d input(posTrajectory[i][0], posTrajectory[i][1], posTrajectory[i][2]);
+    Eigen::Vector3d input(position_trajectory[i][0], position_trajectory[i][1], position_trajectory[i][2]);
     // Updating the estimate with the measurement
-    translationalEstimator.updateEstimate(input);
+    translational_estimator.updateEstimate(input);
     // Getting the position and velocity estimates
-    Eigen::Vector3d estimatedPosition = translationalEstimator.getEstimatedPosition();
-    Eigen::Vector3d estimatedVelocity = translationalEstimator.getEstimatedVelocity();
+    Eigen::Vector3d estimated_position = translational_estimator.getEstimatedPosition();
+    Eigen::Vector3d estimated_velocity = translational_estimator.getEstimatedVelocity();
     // Moving values to arrays
-    posEstTrajectory[i][0] = estimatedPosition.x();
-    posEstTrajectory[i][1] = estimatedPosition.y();
-    posEstTrajectory[i][2] = estimatedPosition.z();
-    velEstTrajectory[i][0] = estimatedVelocity.x();
-    velEstTrajectory[i][1] = estimatedVelocity.y();
-    velEstTrajectory[i][2] = estimatedVelocity.z();
+    position_trajectory_estimate[i][0] = estimated_position.x();
+    position_trajectory_estimate[i][1] = estimated_position.y();
+    position_trajectory_estimate[i][2] = estimated_position.z();
+    velocity_trajectory_estimate[i][0] = estimated_velocity.x();
+    velocity_trajectory_estimate[i][1] = estimated_velocity.y();
+    velocity_trajectory_estimate[i][2] = estimated_velocity.z();
   }
 
   // Start index for error calculation
-  const int startIndex = trajectoryLength / 2;
+  const int start_index = trajectory_length / 2;
 
   // Calculating position estimate errors
-  double posError[3];
-  calculate3dRmsError(posTrajectory, posEstTrajectory, trajectoryLength, startIndex, posError);
+  double position_error[3];
+  calculate3dRmsError(position_trajectory, position_trajectory_estimate, trajectory_length, start_index, position_error);
 
   // Performing test
-  EXPECT_NEAR(posError[0], 0, POS_ERROR_THRESHOLD) << "X position estimate error too great";
-  EXPECT_NEAR(posError[1], 0, POS_ERROR_THRESHOLD) << "Y position estimate error too great";
-  EXPECT_NEAR(posError[2], 0, POS_ERROR_THRESHOLD) << "Z position estimate error too great";
+  EXPECT_NEAR(position_error[0], 0, POS_ERROR_THRESHOLD) << "X position estimate error too great";
+  EXPECT_NEAR(position_error[1], 0, POS_ERROR_THRESHOLD) << "Y position estimate error too great";
+  EXPECT_NEAR(position_error[2], 0, POS_ERROR_THRESHOLD) << "Z position estimate error too great";
 
   // Calculating velocity estimate errors
-  double velError[3];
-  calculate3dRmsError(velTrajectory, velEstTrajectory, trajectoryLength, startIndex, velError);
+  double velocity_error[3];
+  calculate3dRmsError(velocity_trajectory, velocity_trajectory_estimate, trajectory_length, start_index, velocity_error);
 
   // Performing test
-  EXPECT_NEAR(velError[0], 0, VEL_ERROR_THRESHOLD) << "X velocity estimate error too great";
-  EXPECT_NEAR(velError[1], 0, VEL_ERROR_THRESHOLD) << "Y velocity estimate error too great";
-  EXPECT_NEAR(velError[2], 0, VEL_ERROR_THRESHOLD) << "Z velocity estimate error too great";
+  EXPECT_NEAR(velocity_error[0], 0, VEL_ERROR_THRESHOLD) << "X velocity estimate error too great";
+  EXPECT_NEAR(velocity_error[1], 0, VEL_ERROR_THRESHOLD) << "Y velocity estimate error too great";
+  EXPECT_NEAR(velocity_error[2], 0, VEL_ERROR_THRESHOLD) << "Z velocity estimate error too great";
 
   /*
    *  For matlab debug
@@ -183,99 +184,99 @@ TEST(translationalEstimator, sinusoidal_clean)
 }
 
 /*
- *	Rotational Estimator Tests
+ *  Rotational Estimator Tests
  */
 
 
-void generateRotationalTrajectorySinusoidal(double quatTrajectory[][4], double omegaTrajectory[][3], const int trajectoryLength)
+void generateRotationalTrajectorySinusoidal(double orientation_trajectory[][4], double rollrate_trajectory[][3], const int trajectory_length)
 {
   // Generating quaternion trajectories
   double roll, pitch, yaw;
-  for (int i = 0; i < trajectoryLength; i++) {
+  for (int i = 0; i < trajectory_length; i++) {
     // Generating euler angles
     roll = ROT_TRAJECTORY_AMPLITUDE * sin( 2 * M_PI * i * ROT_TRAJECTORY_DT * ROT_TRAJECTORY_FREQ + ROT_TRAJECTORY_PHASE_OFFSET_X);
     pitch = ROT_TRAJECTORY_AMPLITUDE * sin( 2 * M_PI * i * ROT_TRAJECTORY_DT * ROT_TRAJECTORY_FREQ + ROT_TRAJECTORY_PHASE_OFFSET_Y);
     yaw = ROT_TRAJECTORY_AMPLITUDE * sin( 2 * M_PI * i * ROT_TRAJECTORY_DT * ROT_TRAJECTORY_FREQ + ROT_TRAJECTORY_PHASE_OFFSET_Z);
     // Converting to quaternions
-    euler2quat(roll, pitch, yaw, quatTrajectory[i]);
+    euler2quat(roll, pitch, yaw, orientation_trajectory[i]);
   }
 
   // Generating the omega trajectories through numeric differentiation
   Eigen::Quaterniond q_k, q_k_1;
-  for (int i = 0; i < trajectoryLength - 1; i++)
+  for (int i = 0; i < trajectory_length - 1; i++)
   {
     // Generating quaternions
-    q_k = Eigen::Quaterniond(quatTrajectory[i + 1][0], quatTrajectory[i + 1][1], quatTrajectory[i + 1][2], quatTrajectory[i + 1][3]);
-    q_k_1 = Eigen::Quaterniond(quatTrajectory[i][0], quatTrajectory[i][1], quatTrajectory[i][2], quatTrajectory[i][3]);
+    q_k = Eigen::Quaterniond(orientation_trajectory[i + 1][0], orientation_trajectory[i + 1][1], orientation_trajectory[i + 1][2], orientation_trajectory[i + 1][3]);
+    q_k_1 = Eigen::Quaterniond(orientation_trajectory[i][0], orientation_trajectory[i][1], orientation_trajectory[i][2], orientation_trajectory[i][3]);
     // Calculating quaternion derivative
     Eigen::Quaterniond diff = Eigen::Quaterniond(
         (q_k.coeffs() - q_k_1.coeffs()) / ROT_TRAJECTORY_DT);
     Eigen::Quaterniond omega = Eigen::Quaterniond(2 * (q_k_1.inverse() * diff).coeffs());
     // Writing to the trajectory
-    omegaTrajectory[i][0] = omega.x();
-    omegaTrajectory[i][1] = omega.y();
-    omegaTrajectory[i][2] = omega.z();
+    rollrate_trajectory[i][0] = omega.x();
+    rollrate_trajectory[i][1] = omega.y();
+    rollrate_trajectory[i][2] = omega.z();
   }
 }
 
 TEST(rotationalEstimator, sinusoidal_clean)
 {
   // Creating the estimator
-  viconEstimator::RotationalEstimator rotationalEstimator;
+  vicon_estimator::RotationalEstimator rotational_estimator;
 
   // Setting the estimator gains
-  viconEstimator::RotationalEstimatorParameters rotationalEstimatorParameters;
-  rotationalEstimatorParameters.dt = ROT_TRAJECTORY_DT;
-  rotationalEstimatorParameters.dQuatHatInitialCovariance = 1;
-  rotationalEstimatorParameters.dOmegaHatInitialCovariance = 1;
-  rotationalEstimatorParameters.dQuatProcessCovariance = 0.01;
-  rotationalEstimatorParameters.dOmegaProcessCovariance = 1000 * 1;
-  rotationalEstimatorParameters.quatMeasurementCovariance = 0.0005;
-  rotationalEstimator.setParameters(rotationalEstimatorParameters);
-  rotationalEstimator.reset();
+  vicon_estimator::RotationalEstimatorParameters rotational_estimator_parameters;
+  rotational_estimator_parameters.dt_ = ROT_TRAJECTORY_DT;
+  rotational_estimator_parameters.dorientation_estimate_initial_covariance_ = 1;
+  rotational_estimator_parameters.drollrate_estimate_initial_covariance_ = 1;
+  rotational_estimator_parameters.dorientation_process_covariance_ = 0.01;
+  rotational_estimator_parameters.drollrate_process_covariance_ = 1000 * 1;
+  rotational_estimator_parameters.orientation_measurement_covariance_ = 0.0005;
+  rotational_estimator.setParameters(rotational_estimator_parameters);
+  rotational_estimator.reset();
 
   // Generating the trajectory over which to test the estimator
-  const int trajectoryLength = static_cast<int>(ROT_TRAJECTORY_PERIOD / ROT_TRAJECTORY_DT) + 1;
-  double quatTrajectory[trajectoryLength][4], omegaTrajectory[trajectoryLength][3];
-  generateRotationalTrajectorySinusoidal(quatTrajectory, omegaTrajectory, trajectoryLength);
+  const int trajectory_length = static_cast<int>(ROT_TRAJECTORY_PERIOD / ROT_TRAJECTORY_DT) + 1;
+  double orientation_trajectory[trajectory_length][4], omega_trajectory[trajectory_length][3];
+  generateRotationalTrajectorySinusoidal(orientation_trajectory, omega_trajectory, trajectory_length);
 
   // Looping over trajectory and retrieving estimates
-  double quatEstTrajectory[trajectoryLength][4];
-  double omegaEstTrajectory[trajectoryLength][3];
-  for (int i = 0; i < trajectoryLength; i++) {
+  double orientation_estimate_trajectory[trajectory_length][4];
+  double rollrate_estimate_trajectory[trajectory_length][3];
+  for (int i = 0; i < trajectory_length; i++) {
     // Constructing input
-    Eigen::Quaterniond input(quatTrajectory[i][0], quatTrajectory[i][1], quatTrajectory[i][2], quatTrajectory[i][3]);
+    Eigen::Quaterniond input(orientation_trajectory[i][0], orientation_trajectory[i][1], orientation_trajectory[i][2], orientation_trajectory[i][3]);
     // Updating the estimate with the measurement
-    rotationalEstimator.updateEstimate(input);
+    rotational_estimator.updateEstimate(input);
     // Getting the position and velocity estimates
-    Eigen::Quaterniond estimatedOrientation = rotationalEstimator.getEstimatedOrientation();
-    Eigen::Vector3d estimatedAngularVelocity = rotationalEstimator.getEstimatedAngularVelocity();
+    Eigen::Quaterniond estimated_orientation = rotational_estimator.getEstimatedOrientation();
+    Eigen::Vector3d estimated_rollrate = rotational_estimator.getEstimatedRollrate();
     // Moving values to arrays
-    quatEstTrajectory[i][0] = estimatedOrientation.w();
-    quatEstTrajectory[i][1] = estimatedOrientation.x();
-    quatEstTrajectory[i][2] = estimatedOrientation.y();
-    quatEstTrajectory[i][3] = estimatedOrientation.z();
-    omegaEstTrajectory[i][0] = estimatedAngularVelocity.x();
-    omegaEstTrajectory[i][1] = estimatedAngularVelocity.y();
-    omegaEstTrajectory[i][2] = estimatedAngularVelocity.z();
+    orientation_estimate_trajectory[i][0] = estimated_orientation.w();
+    orientation_estimate_trajectory[i][1] = estimated_orientation.x();
+    orientation_estimate_trajectory[i][2] = estimated_orientation.y();
+    orientation_estimate_trajectory[i][3] = estimated_orientation.z();
+    rollrate_estimate_trajectory[i][0] = estimated_rollrate.x();
+    rollrate_estimate_trajectory[i][1] = estimated_rollrate.y();
+    rollrate_estimate_trajectory[i][2] = estimated_rollrate.z();
   }
 
   // Start index for error calculation
-  const int startIndex = trajectoryLength / 2;
+  const int start_index = trajectory_length / 2;
 
   // Calculating position estimate errors
-  double quatError[3];
-  calculateQuatRmsError(quatTrajectory, quatEstTrajectory, trajectoryLength, startIndex, quatError);
+  double orientation_error[3];
+  calculateQuaternionRmsError(orientation_trajectory, orientation_estimate_trajectory, trajectory_length, start_index, orientation_error);
 
   // Performing test
-  EXPECT_NEAR(quatError[0], 0, QUAT_ERROR_THRESHOLD) << "X errorquaternion estimate error too great";
-  EXPECT_NEAR(quatError[1], 0, QUAT_ERROR_THRESHOLD) << "Y errorquaternion estimate error too great";
-  EXPECT_NEAR(quatError[2], 0, QUAT_ERROR_THRESHOLD) << "Z errorquaternion estimate error too great";
+  EXPECT_NEAR(orientation_error[0], 0, QUAT_ERROR_THRESHOLD) << "X errorquaternion estimate error too great";
+  EXPECT_NEAR(orientation_error[1], 0, QUAT_ERROR_THRESHOLD) << "Y errorquaternion estimate error too great";
+  EXPECT_NEAR(orientation_error[2], 0, QUAT_ERROR_THRESHOLD) << "Z errorquaternion estimate error too great";
 
   // Calculating velocity estimate errors
   double omegaError[3];
-  calculate3dRmsError(omegaTrajectory, omegaEstTrajectory, trajectoryLength,
-                      startIndex, omegaError);
+  calculate3dRmsError(omega_trajectory, rollrate_estimate_trajectory, trajectory_length,
+                      start_index, omegaError);
 
   // Performing test
   EXPECT_NEAR(omegaError[0], 0, OMEGA_ERROR_THRESHOLD) << "X rotational velocity estimate error too great";
@@ -313,7 +314,7 @@ TEST(rotationalEstimator, sinusoidal_clean)
 }
 
 /*
- *	GTests Main
+ *  GTests Main
  */
 
 int main(int argc, char **argv)

@@ -28,26 +28,33 @@
 
 #include <Eigen/Geometry>
 
-namespace viconEstimator {
+namespace vicon_estimator {
 
 // The parameter class for the translational estimator and parameter default values
-static const double dtTranslationalDefault = 0.01;
-static const double kpTranslationalDefault = 1.0;
-static const double dvTranslationalDefault = 10.0;
+static const double kDefaultTranslationalDt = 0.01;
+static const double kDefaultTranslationalKp = 1.0;
+static const double kDefaultTranslationalKv = 10.0;
+static const Eigen::Vector3d kDefaultInitialPositionEstimate = Eigen::Vector3d::Zero();
+static const Eigen::Vector3d kDefaultInitialVelocityEstimate = Eigen::Vector3d::Zero();
+
 class TranslationalEstimatorParameters
 {
 
  public:
   // Constructor
   TranslationalEstimatorParameters()
-      : dt(dtTranslationalDefault),
-        kp(kpTranslationalDefault),
-        kv(dvTranslationalDefault)
+      : dt_(kDefaultTranslationalDt),
+        kp_(kDefaultTranslationalKp),
+        kv_(kDefaultTranslationalKv),
+        initial_position_estimate_(kDefaultInitialPositionEstimate),
+        initial_velocity_estimate_(kDefaultInitialVelocityEstimate)
   { }
 
-  double dt;
-  double kp;
-  double kv;
+  double dt_;
+  double kp_;
+  double kv_;
+  Eigen::Vector3d initial_position_estimate_;
+  Eigen::Vector3d initial_velocity_estimate_;
 };
 
 class TranslationalEstimatorResults
@@ -57,19 +64,19 @@ class TranslationalEstimatorResults
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
   // Constructor
   TranslationalEstimatorResults()
-      : posMeasured(0.0, 0.0, 0.0),
-        posOld(0.0, 0.0, 0.0),
-        velOld(0.0, 0.0, 0.0),
-        posEst(0.0, 0.0, 0.0),
-        velEst(0.0, 0.0, 0.0)
+      : position_measured_(Eigen::Vector3d::Zero()),
+        position_old_(Eigen::Vector3d::Zero()),
+        velocity_old_(Eigen::Vector3d::Zero()),
+        position_estimate_(Eigen::Vector3d::Zero()),
+        velocity_estimate_(Eigen::Vector3d::Zero())
   { }
 
   // Intermediate Estimator results
-  Eigen::Vector3d posMeasured;
-  Eigen::Vector3d posOld;
-  Eigen::Vector3d velOld;
-  Eigen::Vector3d posEst;
-  Eigen::Vector3d velEst;
+  Eigen::Vector3d position_measured_;
+  Eigen::Vector3d position_old_;
+  Eigen::Vector3d velocity_old_;
+  Eigen::Vector3d position_estimate_;
+  Eigen::Vector3d velocity_estimate_;
 
 };
 
@@ -87,53 +94,66 @@ class TranslationalEstimator
   // Reset the estimator
   void reset();
   // Setting the estimator parameters
-  void setParameters(const TranslationalEstimatorParameters& translationalEstimatorParameters);
+  void setParameters(const TranslationalEstimatorParameters& estimator_parameters);
   // Return intermediate results structure
-  TranslationalEstimatorResults getResults() const { return estimatorResults_; }
+  TranslationalEstimatorResults getResults() const { return estimator_results_; }
   // Return estimated position
-  Eigen::Vector3d getEstimatedPosition() const { return posHat_; }
+  Eigen::Vector3d getEstimatedPosition() const { return position_estimate_; }
   // Return estimated velocity
-  Eigen::Vector3d getEstimatedVelocity() const { return velHat_; }
+  Eigen::Vector3d getEstimatedVelocity() const { return velocity_estimate_; }
 
  private:
 
   // Estimator parameters
-  TranslationalEstimatorParameters estimatorParameters_;
-  TranslationalEstimatorResults estimatorResults_;
+  TranslationalEstimatorParameters estimator_parameters_;
+  TranslationalEstimatorResults estimator_results_;
 
   // Estimates
-  Eigen::Vector3d posHat_;
-  Eigen::Vector3d velHat_;
+  Eigen::Vector3d position_estimate_;
+  Eigen::Vector3d velocity_estimate_;
 
 };
 
 // The parameter class for the translational estimator and parameter default values
-static const double dtRotationalDefault = 0.01;
-static const double dQuatHatInitialCovarianceDefault = 1;
-static const double dOmegaHatInitialCovarianceDefault = 1;
-static const double dQuatProcessCovarianceDefault = 0.01;
-static const double dOmegaProcessCovarianceDefault = 1;
-static const double quatMeasurementCovarianceDefault = 0.0005;
+static const double kDefaultRotationalDt = 0.01;
+static const double kDefaultdOrientationEstimateInitialCovariance = 1;
+static const double kDefaultdRollrateEstimateInitialCovariance = 1;
+static const double kDefaultdOrientationProcessCovariance = 0.01;
+static const double kDefaultdRollrateProcessCovariance = 1;
+static const double kDefaultOrientationMeasurementCovariance = 0.0005;
+static const Eigen::Quaterniond kDefaultInitialOrientationEstimate = Eigen::Quaterniond::Identity();
+static const Eigen::Vector3d kDefaultInitialRollrateEstimate = Eigen::Vector3d::Zero();
+static const Eigen::Vector3d kDefaultInitialDorientationEstimate = Eigen::Vector3d::Zero();
+static const Eigen::Vector3d kDefaultInitialDrollrateEstimate = Eigen::Vector3d::Zero();
+
 class RotationalEstimatorParameters
 {
 
  public:
   // Constructor
   RotationalEstimatorParameters()
-      : dt(dtRotationalDefault),
-        dQuatHatInitialCovariance(dQuatHatInitialCovarianceDefault),
-        dOmegaHatInitialCovariance(dOmegaHatInitialCovarianceDefault),
-        dQuatProcessCovariance(dQuatProcessCovarianceDefault),
-        dOmegaProcessCovariance(dOmegaProcessCovarianceDefault),
-        quatMeasurementCovariance(quatMeasurementCovarianceDefault)
+      : dt_(kDefaultRotationalDt),
+        dorientation_estimate_initial_covariance_(kDefaultdOrientationEstimateInitialCovariance),
+        drollrate_estimate_initial_covariance_(kDefaultdRollrateEstimateInitialCovariance),
+        dorientation_process_covariance_(kDefaultdOrientationProcessCovariance),
+        drollrate_process_covariance_(kDefaultdRollrateProcessCovariance),
+        orientation_measurement_covariance_(kDefaultOrientationMeasurementCovariance),
+        initial_orientation_estimate_(kDefaultInitialOrientationEstimate),
+        initial_rollrate_estimate_(kDefaultInitialRollrateEstimate),
+        initial_dorientation_estimate_(kDefaultInitialDorientationEstimate),
+        initial_drollrate_estimate_(kDefaultInitialDrollrateEstimate)
   { };
 
-  double dt;
-  double dQuatHatInitialCovariance;
-  double dOmegaHatInitialCovariance;
-  double dQuatProcessCovariance;
-  double dOmegaProcessCovariance;
-  double quatMeasurementCovariance;
+  double dt_;
+  double dorientation_estimate_initial_covariance_;
+  double drollrate_estimate_initial_covariance_;
+  double dorientation_process_covariance_;
+  double drollrate_process_covariance_;
+  double orientation_measurement_covariance_;
+  Eigen::Quaterniond initial_orientation_estimate_;
+  Eigen::Vector3d initial_rollrate_estimate_;
+  Eigen::Vector3d initial_dorientation_estimate_;
+  Eigen::Vector3d initial_drollrate_estimate_;
 };
 
 class RotationalEstimatorResults
@@ -143,19 +163,19 @@ class RotationalEstimatorResults
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
   // Constructor
   RotationalEstimatorResults()
-      : quatMeasured(1.0, 0.0, 0.0, 0.0),
-        quatOld(1.0, 0.0, 0.0, 0.0),
-        omegaOld(0.0, 0.0, 0.0),
-        quatEst(1.0, 0.0, 0.0, 0.0),
-        omegaEst(0.0, 0.0, 0.0)
+      : orientation_measured_(Eigen::Quaterniond::Identity()),
+        orientation_old_(Eigen::Quaterniond::Identity()),
+        rollrate_old_(Eigen::Vector3d::Zero()),
+        orientation_estimate_(Eigen::Quaterniond::Identity()),
+        rollrate_estimate_(Eigen::Vector3d::Zero())
   { };
 
   // Intermediate Estimator results
-  Eigen::Quaterniond quatMeasured;
-  Eigen::Quaterniond quatOld;
-  Eigen::Vector3d omegaOld;
-  Eigen::Quaterniond quatEst;
-  Eigen::Vector3d omegaEst;
+  Eigen::Quaterniond orientation_measured_; //TODO(millanea): refactoring up to here.
+  Eigen::Quaterniond orientation_old_;
+  Eigen::Vector3d rollrate_old_;
+  Eigen::Quaterniond orientation_estimate_;
+  Eigen::Vector3d rollrate_estimate_;
 
 };
 
@@ -167,62 +187,62 @@ class RotationalEstimator
 
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
   // Constructor
-  RotationalEstimator();  //ros::NodeHandle& nh
+  RotationalEstimator();
   // Update estimated quantities with new measurement
-  void updateEstimate(const Eigen::Quaterniond& quatMeasured);
+  void updateEstimate(const Eigen::Quaterniond& orientation_measured);
   // Reset the estimator
   void reset();
   // Setting the estimator parameters
-  void setParameters(const RotationalEstimatorParameters& rotationalEstimatorParameters);
+  void setParameters(const RotationalEstimatorParameters& estimator_parameters);
   // Return intermediate results structure
-  RotationalEstimatorResults getResults() const { return estimatorResults_; }
+  RotationalEstimatorResults getResults() const { return estimator_results_; }
   // Return estimated orientation
-  const Eigen::Quaterniond getEstimatedOrientation() const { return quatHat_; }
+  const Eigen::Quaterniond getEstimatedOrientation() const { return orientation_estimate_; }
   // Return estimated angular velocity
-  Eigen::Vector3d getEstimatedAngularVelocity() const { return omegaHat_; }
+  Eigen::Vector3d getEstimatedRollrate() const { return rollrate_estimate_; }
 
  private:
 
   // Estimator parameters
-  RotationalEstimatorParameters estimatorParameters_;
+  RotationalEstimatorParameters estimator_parameters_;
   // Estimator (intermediate) results
-  RotationalEstimatorResults estimatorResults_;
+  RotationalEstimatorResults estimator_results_;
 
   // Global estimates
-  Eigen::Quaterniond quatHat_;
-  Eigen::Vector3d omegaHat_;
+  Eigen::Quaterniond orientation_estimate_;
+  Eigen::Vector3d rollrate_estimate_;
   // Error estimates
-  Eigen::Vector3d dQuatHat_;
-  Eigen::Vector3d dOmegaHat_;
+  Eigen::Vector3d dorientation_estimate_;
+  Eigen::Vector3d drollrate_estimate_;
   // Covariance Estimates
   Eigen::Matrix<double, 6, 6> covariance_;
-  Eigen::Matrix<double, 6, 6> processCovariance_;
-  Eigen::Matrix<double, 4, 4> measurementCovariance_;
+  Eigen::Matrix<double, 6, 6> process_covariance_;
+  Eigen::Matrix<double, 4, 4> measurement_covariance_;
 
   // Function to generate a skew symmetric matrix from a vector
   Eigen::Matrix3d skewMatrix(const Eigen::Vector3d& vec) const;
-  //
-  void updateEstimatePropagateGlobalEstimate( const Eigen::Matrix<double, 7, 1>& xOld,
-                                              Eigen::Matrix<double, 7, 1>* xPriori);
+  // Serial of functions performing the estimate update steps
+  void updateEstimatePropagateGlobalEstimate( const Eigen::Matrix<double, 7, 1>& x_old,
+                                              Eigen::Matrix<double, 7, 1>* x_priori);
 
-  void updateEstimatePropagateErrorEstimate( const Eigen::Matrix<double, 6, 1>& dxOld,
-                                             const Eigen::Matrix<double, 7, 1>& xOld,
-                                             Eigen::Matrix<double, 6, 1>* dxPriori);
+  void updateEstimatePropagateErrorEstimate( const Eigen::Matrix<double, 6, 1>& dx_old,
+                                             const Eigen::Matrix<double, 7, 1>& x_old,
+                                             Eigen::Matrix<double, 6, 1>* dx_priori);
 
-  void updateEstimatePropagateErrorCovariance( Eigen::Matrix<double, 6, 6>& covOld,
-                                               const Eigen::Matrix<double, 7, 1>& xOld,
-                                               Eigen::Matrix<double, 6, 6>* covPriori);
+  void updateEstimatePropagateErrorCovariance( Eigen::Matrix<double, 6, 6>& cov_old,
+                                               const Eigen::Matrix<double, 7, 1>& x_old,
+                                               Eigen::Matrix<double, 6, 6>* covariance_priori);
 
-  void updateEstimateUpdateErrorEstimate( const Eigen::Quaterniond& quatMeasured,
-                                          const Eigen::Matrix<double, 7, 1>& xPriori,
-                                          const Eigen::Matrix<double, 6, 1>& dxPriori,
-                                          const Eigen::Matrix<double, 6, 6>& covPriori,
-                                          Eigen::Matrix<double, 6, 1>* dxMeasurement,
-                                          Eigen::Matrix<double, 6, 6>* covMeasurement);
+  void updateEstimateUpdateErrorEstimate( const Eigen::Quaterniond& orientation_measured,
+                                          const Eigen::Matrix<double, 7, 1>& x_priori,
+                                          const Eigen::Matrix<double, 6, 1>& dx_priori,
+                                          const Eigen::Matrix<double, 6, 6>& covariance_priori,
+                                          Eigen::Matrix<double, 6, 1>* dx_measurement,
+                                          Eigen::Matrix<double, 6, 6>* covariance_measurement);
 
-  void updateEstimateRecombineErrorGlobal(  const Eigen::Matrix<double, 7, 1> xPriori,
-                                            Eigen::Matrix<double, 7, 1>* xMeasurement,
-                                            Eigen::Matrix<double, 6, 1>* dxMeasurement);
+  void updateEstimateRecombineErrorGlobal(  const Eigen::Matrix<double, 7, 1> x_priori,
+                                            Eigen::Matrix<double, 7, 1>* x_measurement,
+                                            Eigen::Matrix<double, 6, 1>* dx_measurement);
 };
 
 class ViconEstimator
@@ -231,29 +251,29 @@ class ViconEstimator
  public:
 
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-  ViconEstimator();  //ros::NodeHandle& nh
+  ViconEstimator();
 
   // Update estimated quantities with new measurement
-  void updateEstimate(const Eigen::Vector3d& posMeasured, const Eigen::Quaterniond& quatMeasured);
+  void updateEstimate(const Eigen::Vector3d& position_measured, const Eigen::Quaterniond& orientation_measured);
   // Reset the estimator
   void reset();
   // Set estimator parameters
-  void setParameters(const TranslationalEstimatorParameters& translationalEstimatorParameters,
-                     const RotationalEstimatorParameters& rotationalEstimatorParameters);
+  void setParameters(const TranslationalEstimatorParameters& translational_estimator_parameters,
+                     const RotationalEstimatorParameters& rotational_estimator_parameters);
   // Get intermediate results
-  void getIntermediateResults ( TranslationalEstimatorResults* translationalEstimatorResults,
-                                RotationalEstimatorResults* rotationalEstimatorResults) const ;
+  void getIntermediateResults ( TranslationalEstimatorResults* translational_estimator_results,
+                                RotationalEstimatorResults* rotational_estimator_results) const ;
 
   // Functions providing access to the various estimates
-  Eigen::Vector3d getEstimatedPosition() const { return translationalEstimator_.getEstimatedPosition(); }
-  Eigen::Vector3d getEstimatedVelocity() const { return translationalEstimator_.getEstimatedVelocity(); }
-  Eigen::Quaterniond getEstimatedOrientation() const { return rotationalEstimator_.getEstimatedOrientation(); }
-  Eigen::Vector3d getEstimatedAngularVelocity() const { return rotationalEstimator_.getEstimatedAngularVelocity(); }
+  Eigen::Vector3d getEstimatedPosition() const { return translational_estimator_.getEstimatedPosition(); }
+  Eigen::Vector3d getEstimatedVelocity() const { return translational_estimator_.getEstimatedVelocity(); }
+  Eigen::Quaterniond getEstimatedOrientation() const { return rotational_estimator_.getEstimatedOrientation(); }
+  Eigen::Vector3d getEstimatedAngularVelocity() const { return rotational_estimator_.getEstimatedRollrate(); }
 
  private:
 
-  TranslationalEstimator translationalEstimator_;
-  RotationalEstimator rotationalEstimator_;
+  TranslationalEstimator translational_estimator_;
+  RotationalEstimator rotational_estimator_;
 
 };
 

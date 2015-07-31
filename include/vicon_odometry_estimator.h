@@ -32,7 +32,7 @@
 
 #include "vicon_estimator.h"
 
-namespace viconEstimator {
+namespace vicon_estimator {
 
 class ViconOdometryEstimator
 {
@@ -49,19 +49,19 @@ class ViconOdometryEstimator
   void publishResults(ros::Time timestamp);
 
   // Calls the underlying estimator, updating the estimate with the latest measurement
-  void updateEstimate(const Eigen::Vector3d& pos_measured, const Eigen::Quaterniond& quatMeasured);
+  void updateEstimate(const Eigen::Vector3d& pos_measured, const Eigen::Quaterniond& orientation_measured);
   // Getter methods for estimates values
-  Eigen::Vector3d getEstimatedPosition() const { return viconEstimator_.getEstimatedPosition(); }
+  Eigen::Vector3d getEstimatedPosition() const { return vicon_estimator_.getEstimatedPosition(); }
 
-  Eigen::Vector3d getEstimatedVelocity() const { return viconEstimator_.getEstimatedVelocity(); }
+  Eigen::Vector3d getEstimatedVelocity() const { return vicon_estimator_.getEstimatedVelocity(); }
 
-  Eigen::Quaterniond getEstimatedOrientation() const { return viconEstimator_.getEstimatedOrientation(); }
+  Eigen::Quaterniond getEstimatedOrientation() const { return vicon_estimator_.getEstimatedOrientation(); }
 
-  Eigen::Vector3d getEstimatedAngularVelocity() const { return viconEstimator_.getEstimatedAngularVelocity(); }
+  Eigen::Vector3d getEstimatedAngularVelocity() const { return vicon_estimator_.getEstimatedAngularVelocity(); }
 
  private:
   // Underlying estimator
-  viconEstimator::ViconEstimator viconEstimator_;
+  vicon_estimator::ViconEstimator vicon_estimator_;
   // Publisher
   ros::Publisher publisher_;
 

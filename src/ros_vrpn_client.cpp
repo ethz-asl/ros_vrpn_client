@@ -145,8 +145,8 @@ void VRPN_CALLBACK track_target(void *, const vrpn_TRACKERCB t)
   Eigen::Quaterniond qOrig(t.quat[3], t.quat[0], t.quat[1], t.quat[2]);
   Eigen::Quaterniond qFix(0.70710678, 0.70710678, 0., 0.);
 
-  Eigen::Quaterniond qRot;
-  Eigen::Vector3d pos;
+  Eigen::Quaterniond orientation_measured_B_W;
+  Eigen::Vector3d position_measured_W;
   switch (coordinate_system)
   {
     case optitrack:
@@ -154,14 +154,14 @@ void VRPN_CALLBACK track_target(void *, const vrpn_TRACKERCB t)
       // Here we rotate the Optitrack measured quaternion by qFix, a
       // Pi/2 rotation around the x-axis. By doing so we convert from
       // NED to ENU (I think).
-      qRot = qFix * qOrig * qFix.inverse();
-      pos = Eigen::Vector3d(t.pos[0], -t.pos[2], t.pos[1]);
+      orientation_measured_B_W = qFix * qOrig * qFix.inverse();
+      position_measured_W = Eigen::Vector3d(t.pos[0], -t.pos[2], t.pos[1]);
       break;
     }
     case vicon:
     {
-      qRot = qOrig;
-      pos = Eigen::Vector3d(t.pos[0], t.pos[1], t.pos[2]);
+      orientation_measured_B_W = qOrig;
+      position_measured_W = Eigen::Vector3d(t.pos[0], t.pos[1], t.pos[2]);
       break;
     }
     default:
@@ -193,48 +193,49 @@ void VRPN_CALLBACK track_target(void *, const vrpn_TRACKERCB t)
   }
 
   // Updating the estimates with the new measurements
-  vicon_odometry_estimator->updateEstimate(pos, qRot);
+  vicon_odometry_estimator->updateEstimate(position_measured_W, orientation_measured_B_W);
   vicon_odometry_estimator->publishResults(timestamp);
-  Eigen::Vector3d position_estimate = vicon_odometry_estimator->getEstimatedPosition();
-  Eigen::Vector3d velocity_estimate = vicon_odometry_estimator->getEstimatedVelocity();
-  Eigen::Quaterniond orientation_estimate = vicon_odometry_estimator->getEstimatedOrientation();
-  Eigen::Vector3d rollrate_estimate = vicon_odometry_estimator->getEstimatedAngularVelocity();
+  Eigen::Vector3d position_estimate_W = vicon_odometry_estimator->getEstimatedPosition();
+  Eigen::Vector3d velocity_estimate_W = vicon_odometry_estimator->getEstimatedVelocity();
+  Eigen::Quaterniond orientation_estimate_B_W = vicon_odometry_estimator->getEstimatedOrientation();
+  Eigen::Vector3d rate_estimate_B = vicon_odometry_estimator->getEstimatedAngularVelocity();
 
   // Rotating the estimated global frame velocity into the body frame
   //TODO(millanea): Need to check the direction of rotation returned by the
-  //                vicon system to ensure that this rotation is being peformed
+  //                vicon system to ensure that this rotation is being performed
   //                correctly.
-  velocity_estimate = orientation_estimate.matrix() * velocity_estimate;
+  Eigen::Vector3d velocity_estimate_B = orientation_estimate_B_W.toRotationMatrix() * velocity_estimate_W;
+  // Eigen::Vector3d velocity_estimate_B = orientation_estimate_W_B.toRotationMatrix().inverse() * velocity_estimate_W;
 
   // Populating topic contents. Published in main loop
   target_state->target.header.stamp = timestamp;
   target_state->target.header.frame_id = coordinate_system_string;
   target_state->target.child_frame_id = frame_id;
-  target_state->target.transform.translation.x = position_estimate.x();
-  target_state->target.transform.translation.y = position_estimate.y();
-  target_state->target.transform.translation.z = position_estimate.z();
-  target_state->target.transform.rotation.x = orientation_estimate.x();
-  target_state->target.transform.rotation.y = orientation_estimate.y();
-  target_state->target.transform.rotation.z = orientation_estimate.z();
-  target_state->target.transform.rotation.w = orientation_estimate.w();
+  target_state->target.transform.translation.x = position_estimate_W.x();
+  target_state->target.transform.translation.y = position_estimate_W.y();
+  target_state->target.transform.translation.z = position_estimate_W.z();
+  target_state->target.transform.rotation.x = orientation_estimate_B_W.x();
+  target_state->target.transform.rotation.y = orientation_estimate_B_W.y();
+  target_state->target.transform.rotation.z = orientation_estimate_B_W.z();
+  target_state->target.transform.rotation.w = orientation_estimate_B_W.w();
 
   // Assemble odometry message.
   target_state->odometry.header.stamp = timestamp;
   target_state->odometry.header.frame_id = coordinate_system_string;
   target_state->odometry.child_frame_id = frame_id;
-  target_state->odometry.pose.pose.position.x = position_estimate.x();
-  target_state->odometry.pose.pose.position.y = position_estimate.y();
-  target_state->odometry.pose.pose.position.z = position_estimate.z();
-  target_state->odometry.pose.pose.orientation.w = orientation_estimate.w();
-  target_state->odometry.pose.pose.orientation.x = orientation_estimate.x();
-  target_state->odometry.pose.pose.orientation.y = orientation_estimate.y();
-  target_state->odometry.pose.pose.orientation.z = orientation_estimate.z();
-  target_state->odometry.twist.twist.linear.x = velocity_estimate.x();
-  target_state->odometry.twist.twist.linear.y = velocity_estimate.y();
-  target_state->odometry.twist.twist.linear.z = velocity_estimate.z();
-  target_state->odometry.twist.twist.angular.x = rollrate_estimate.x();
-  target_state->odometry.twist.twist.angular.y = rollrate_estimate.y();
-  target_state->odometry.twist.twist.angular.z = rollrate_estimate.z();
+  target_state->odometry.pose.pose.position.x = position_estimate_W.x();
+  target_state->odometry.pose.pose.position.y = position_estimate_W.y();
+  target_state->odometry.pose.pose.position.z = position_estimate_W.z();
+  target_state->odometry.pose.pose.orientation.w = orientation_estimate_B_W.w();
+  target_state->odometry.pose.pose.orientation.x = orientation_estimate_B_W.x();
+  target_state->odometry.pose.pose.orientation.y = orientation_estimate_B_W.y();
+  target_state->odometry.pose.pose.orientation.z = orientation_estimate_B_W.z();
+  target_state->odometry.twist.twist.linear.x = velocity_estimate_B.x();
+  target_state->odometry.twist.twist.linear.y = velocity_estimate_B.y();
+  target_state->odometry.twist.twist.linear.z = velocity_estimate_B.z();
+  target_state->odometry.twist.twist.angular.x = rate_estimate_B.x();
+  target_state->odometry.twist.twist.angular.y = rate_estimate_B.y();
+  target_state->odometry.twist.twist.angular.z = rate_estimate_B.z();
 
   // Indicating to the main loop the data is ready for publishing 
   fresh_data = true;

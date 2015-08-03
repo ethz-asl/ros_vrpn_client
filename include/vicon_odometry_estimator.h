@@ -49,7 +49,7 @@ class ViconOdometryEstimator
   void publishResults(ros::Time timestamp);
 
   // Calls the underlying estimator, updating the estimate with the latest measurement
-  void updateEstimate(const Eigen::Vector3d& pos_measured, const Eigen::Quaterniond& orientation_measured);
+  void updateEstimate(const Eigen::Vector3d& position_measured_W, const Eigen::Quaterniond& orientation_measured_B_W);
   // Getter methods for estimates values
   Eigen::Vector3d getEstimatedPosition() const { return vicon_estimator_.getEstimatedPosition(); }
 

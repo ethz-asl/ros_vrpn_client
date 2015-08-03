@@ -228,9 +228,9 @@ TEST(rotationalEstimator, sinusoidal_clean)
   vicon_estimator::RotationalEstimatorParameters rotational_estimator_parameters;
   rotational_estimator_parameters.dt_ = ROT_TRAJECTORY_DT;
   rotational_estimator_parameters.dorientation_estimate_initial_covariance_ = 1;
-  rotational_estimator_parameters.drollrate_estimate_initial_covariance_ = 1;
+  rotational_estimator_parameters.drate_estimate_initial_covariance_ = 1;
   rotational_estimator_parameters.dorientation_process_covariance_ = 0.01;
-  rotational_estimator_parameters.drollrate_process_covariance_ = 1000 * 1;
+  rotational_estimator_parameters.drate_process_covariance_ = 1000 * 1;
   rotational_estimator_parameters.orientation_measurement_covariance_ = 0.0005;
   rotational_estimator.setParameters(rotational_estimator_parameters);
   rotational_estimator.reset();
@@ -250,7 +250,7 @@ TEST(rotationalEstimator, sinusoidal_clean)
     rotational_estimator.updateEstimate(input);
     // Getting the position and velocity estimates
     Eigen::Quaterniond estimated_orientation = rotational_estimator.getEstimatedOrientation();
-    Eigen::Vector3d estimated_rollrate = rotational_estimator.getEstimatedRollrate();
+    Eigen::Vector3d estimated_rollrate = rotational_estimator.getEstimatedRate();
     // Moving values to arrays
     orientation_estimate_trajectory[i][0] = estimated_orientation.w();
     orientation_estimate_trajectory[i][1] = estimated_orientation.x();

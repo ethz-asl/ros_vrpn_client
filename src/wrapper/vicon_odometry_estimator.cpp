@@ -34,7 +34,7 @@ void ViconOdometryEstimator::initializeParameters(ros::NodeHandle& nh)
 {
   // Recovering translational estimator parameters values from the parameter server
   vicon_estimator::TranslationalEstimatorParameters translationalEstimatorParameters;
-  nh.getParam("translational_estimator/dt",
+  nh.getParam("vicon_estimator/dt",
               translationalEstimatorParameters.dt_);
   nh.getParam("translational_estimator/kp",
               translationalEstimatorParameters.kp_);
@@ -42,16 +42,16 @@ void ViconOdometryEstimator::initializeParameters(ros::NodeHandle& nh)
               translationalEstimatorParameters.kv_);
   // Recovering rotational estimator parameters values from the parameter server
   vicon_estimator::RotationalEstimatorParameters rotationalEstimatorParameters;
-  nh.getParam("rotational_estimator/dt",
+  nh.getParam("vicon_estimator/dt",
               rotationalEstimatorParameters.dt_);
   nh.getParam("rotational_estimator/orientation_estimate_initial_covariance",
               rotationalEstimatorParameters.dorientation_estimate_initial_covariance_);
-  nh.getParam("rotational_estimator/roll_rate_estimate_initial_covariance",
-              rotationalEstimatorParameters.drollrate_estimate_initial_covariance_);
+  nh.getParam("rotational_estimator/rate_estimate_initial_covariance",
+              rotationalEstimatorParameters.drate_estimate_initial_covariance_);
   nh.getParam("rotational_estimator/orientation_process_covariance",
               rotationalEstimatorParameters.dorientation_process_covariance_);
-  nh.getParam("rotational_estimator/roll_rate_process_covariance",
-              rotationalEstimatorParameters.drollrate_process_covariance_);
+  nh.getParam("rotational_estimator/rate_process_covariance",
+              rotationalEstimatorParameters.drate_process_covariance_);
   nh.getParam("rotational_estimator/orientation_measurementCovariance",
               rotationalEstimatorParameters.orientation_measurement_covariance_);
   // Setting parameters in estimator
@@ -66,10 +66,15 @@ void ViconOdometryEstimator::reset()
 void ViconOdometryEstimator::publishResults(ros::Time timestamp)
 {
 
+  //TODO(millanea): Publishing of the intermediate results was useful when
+  //                constructing the estimator however is not likely to still
+  //                be useful. Should be removed.
+
+
   vicon_estimator::TranslationalEstimatorResults translational_estimator_results;
   vicon_estimator::RotationalEstimatorResults rotational_estimator_results;
   vicon_estimator_.getIntermediateResults(&translational_estimator_results,
-                                         &rotational_estimator_results);
+                                          &rotational_estimator_results);
 
   // Creating estimator message
   ros_vrpn_client::viconEstimator msg;
@@ -77,9 +82,9 @@ void ViconOdometryEstimator::publishResults(ros::Time timestamp)
   msg.header.stamp = timestamp;
 
   // Writing the measurement to the message object
-  msg.pos_measured.x = translational_estimator_results.position_measured_.x();
-  msg.pos_measured.y = translational_estimator_results.position_measured_.y();
-  msg.pos_measured.z = translational_estimator_results.position_measured_.z();
+  msg.pos_measured.x = translational_estimator_results.position_measured.x();
+  msg.pos_measured.y = translational_estimator_results.position_measured.y();
+  msg.pos_measured.z = translational_estimator_results.position_measured.z();
   // Writing the old estimates to the message object
   msg.pos_old.x = translational_estimator_results.position_old_.x();
   msg.pos_old.y = translational_estimator_results.position_old_.y();
@@ -105,26 +110,26 @@ void ViconOdometryEstimator::publishResults(ros::Time timestamp)
   msg.quat_old.x = rotational_estimator_results.orientation_old_.x();
   msg.quat_old.y = rotational_estimator_results.orientation_old_.y();
   msg.quat_old.z = rotational_estimator_results.orientation_old_.z();
-  msg.omega_old.x = rotational_estimator_results.rollrate_old_.x();
-  msg.omega_old.y = rotational_estimator_results.rollrate_old_.y();
-  msg.omega_old.z = rotational_estimator_results.rollrate_old_.z();
+  msg.omega_old.x = rotational_estimator_results.rate_old_.x();
+  msg.omega_old.y = rotational_estimator_results.rate_old_.y();
+  msg.omega_old.z = rotational_estimator_results.rate_old_.z();
   // Posteriori results
   msg.quat_est.w = rotational_estimator_results.orientation_estimate_.w();
   msg.quat_est.x = rotational_estimator_results.orientation_estimate_.x();
   msg.quat_est.y = rotational_estimator_results.orientation_estimate_.y();
   msg.quat_est.z = rotational_estimator_results.orientation_estimate_.z();
-  msg.omega_est.x = rotational_estimator_results.rollrate_estimate_.x();
-  msg.omega_est.y = rotational_estimator_results.rollrate_estimate_.y();
-  msg.omega_est.z = rotational_estimator_results.rollrate_estimate_.z();
+  msg.omega_est.x = rotational_estimator_results.rate_estimate_.x();
+  msg.omega_est.y = rotational_estimator_results.rate_estimate_.y();
+  msg.omega_est.z = rotational_estimator_results.rate_estimate_.z();
 
   // Publishing estimator message
   publisher_.publish(msg);
 }
 
-void ViconOdometryEstimator::updateEstimate(const Eigen::Vector3d& position_measured,
-                                            const Eigen::Quaterniond& orientation_measured)
+void ViconOdometryEstimator::updateEstimate(const Eigen::Vector3d& position_measured_W,
+                                            const Eigen::Quaterniond& orientation_measured_B_W)
 {
-  vicon_estimator_.updateEstimate(position_measured, orientation_measured);
+  vicon_estimator_.updateEstimate(position_measured_W, orientation_measured_B_W);
 }
 
 }

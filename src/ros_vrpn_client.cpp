@@ -38,6 +38,7 @@
 #include <nav_msgs/Odometry.h>
 #include <stdio.h>
 #include <math.h>
+#include <iostream>
 
 #include <vrpn_Connection.h>
 #include <vrpn_Tracker.h>
@@ -92,8 +93,9 @@ class Rigid_Body
   {
     target_pub = nh.advertise<geometry_msgs::TransformStamped>("pose", 100);
     odometry_pub = nh.advertise<nav_msgs::Odometry>("odometry", 100);
-    std::string connection_name = server_ip + ":" + boost::lexical_cast<std::string>(port);
-    connection = vrpn_get_connection_by_name(connection_name.c_str());
+    std::stringstream connection_name;
+    connection_name << server_ip << ":" << port;
+    connection = vrpn_get_connection_by_name(connection_name.str().c_str());
     tracker = new vrpn_Tracker_Remote(object_name.c_str(), connection);
 
     tracker->print_latest_report();
@@ -238,7 +240,7 @@ void VRPN_CALLBACK track_target(void *, const vrpn_TRACKERCB t)
 
 int main(int argc, char* argv[])
 {
-  ros::init(argc, argv, "ros_vrpn_client");
+  ros::init(argc, argv, "ros_vrpn_client", ros::init_options::AnonymousName);
   ros::NodeHandle nh("~");
 
   target_state = new TargetState;
@@ -246,7 +248,6 @@ int main(int argc, char* argv[])
   std::string vrpn_server_ip;
   int vrpn_port;
   std::string trackedObjectName;
-  std::string object_name;
 
   nh.param<std::string>("vrpn_server_ip", vrpn_server_ip, std::string());
   nh.param<int>("vrpn_port", vrpn_port, 3883);

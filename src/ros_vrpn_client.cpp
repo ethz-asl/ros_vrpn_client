@@ -31,89 +31,141 @@
 
 //== This application listens for a rigid body named 'Tracker' on a remote machine
 //== and publishes & tf it's position and orientation through ROS.
-
 #include <ros/ros.h>
 #include <tf/transform_broadcaster.h>
 #include <geometry_msgs/TransformStamped.h>
+#include <iostream>
+#include <nav_msgs/Odometry.h>
 #include <stdio.h>
 #include <math.h>
 
 #include <vrpn_Connection.h>
-#include <vrpn_Tracker.h> 
-
+#include <vrpn_Tracker.h>
 #include <Eigen/Geometry>
+
+#include "vicon_odometry_estimator.h"
 
 void VRPN_CALLBACK track_target(void *, const vrpn_TRACKERCB t);
 
-class TargetState {
+// TODO(millanea@ethz.ch): The following callbacks should be implemented in the case that
+//                         the tracking system supports them. In this case a flag should be
+//                         added to the code indicating the whether or not the vicon estimator
+//                         should be run.
+//void VRPN_CALLBACK track_target_velocity(void *, const vrpn_TRACKERVELCB tv);
+//void VRPN_CALLBACK track_target_acceleration(void *, const vrpn_TRACKERACCCB ta);
+
+class TargetState
+{
  public:
   geometry_msgs::TransformStamped target;
+  nav_msgs::Odometry odometry;
 };
 
 TargetState *target_state;
 std::string frame_id;
-std::string corrdinate_system_string;
+std::string coordinate_system_string;
 
-enum CoordinateSystem {
+enum CoordinateSystem
+{
   vicon,
   optitrack
-} corrdinate_system;
+} coordinate_system;
 
-// set to true in the VRPN callback function.
+// Global indicating the availability of new VRPN callback function.
 bool fresh_data = false;
 vrpn_TRACKERCB prev_vrpn_data;
 
-class Rigid_Body {
+// Pointer to the vicon estimator. Global such that it can be accessed from the callback
+vicon_estimator::ViconOdometryEstimator* vicon_odometry_estimator = NULL;
+
+class Rigid_Body
+{
  private:
   ros::Publisher target_pub;
+  ros::Publisher odometry_pub;
   tf::TransformBroadcaster br;
   vrpn_Connection *connection;
   vrpn_Tracker_Remote *tracker;
 
  public:
-  Rigid_Body(ros::NodeHandle& nh, std::string server_ip, int port) {
+  Rigid_Body(ros::NodeHandle& nh, std::string server_ip, int port)
+  {
     target_pub = nh.advertise<geometry_msgs::TransformStamped>("pose", 100);
-    std::string connec_nm = server_ip + ":" + boost::lexical_cast<std::string>(port);
-    connection = vrpn_get_connection_by_name(connec_nm.c_str());
+    odometry_pub = nh.advertise<nav_msgs::Odometry>("odometry", 100);
+    std::string connection_name = server_ip + ":" + boost::lexical_cast<std::string>(port);
+    connection = vrpn_get_connection_by_name(connection_name.c_str());
     std::string target_name = nh.getNamespace().substr(1);
     tracker = new vrpn_Tracker_Remote(target_name.c_str(), connection);
+
+    tracker->print_latest_report();
     this->tracker->register_change_handler(NULL, track_target);
+
+    // TODO(millanea@ethz.ch): The following callbacks should be added if they're available.
+    //                         See detailed note above.
+    //this->tracker->register_change_handler(NULL, track_target_velocity);
+    //this->tracker->register_change_handler(NULL, track_target_acceleration);
+
+    tracker->print_latest_report();
   }
 
-  void publish_target_state(TargetState *target_state) {
+  void publish_target_state(TargetState *target_state)
+  {
     br.sendTransform(target_state->target);
     target_pub.publish(target_state->target);
   }
 
-  void step_vrpn() {
+  void publish_odometry(TargetState *target_state)
+  {
+    odometry_pub.publish(target_state->odometry);
+  }
+
+  void step_vrpn()
+  {
     this->tracker->mainloop();
     this->connection->mainloop();
   }
 };
 
-//== Tracker Position/Orientation Callback ==--
-void VRPN_CALLBACK track_target(void *, const vrpn_TRACKERCB t) {
-  Eigen::Quaterniond q_orig(t.quat[3], t.quat[0], t.quat[1], t.quat[2]);
-  Eigen::Quaterniond q_fix(0.70710678, 0.70710678, 0., 0.);
 
-  Eigen::Quaterniond q_rot;
-  Eigen::Vector3d pos;
-  switch (corrdinate_system) {
-    case optitrack: {
-      // optitrak <-- funky <-- object
-      // the q_fix.inverse() esures that when optitrak_funky says 0 0 0
-      // for roll pitch yaw, there is still a rotation that aligns the
-      // object frame with the /optitrak frame (and not /optitrak_funky)
-      q_rot = q_fix * q_orig * q_fix.inverse();
-      pos = Eigen::Vector3d(t.pos[0], -t.pos[2], t.pos[1]);
+// TODO(millanea@ethz.ch): The following callbacks should be implemented if they're required.
+//                         See detailed note above.
+//void VRPN_CALLBACK track_target_acceleration(void *, const vrpn_TRACKERACCCB ta) {
+//  std::cout<<"acceleration_callback"<<std::endl;
+//  std::cout<<"ta.vel[0]"<<ta.acc[0]<<std::endl;
+//}
+//
+//void VRPN_CALLBACK track_target_velocity(void *, const vrpn_TRACKERVELCB tv) {
+//  std::cout<<"velocity_callback"<<std::endl;
+//  std::cout<<"tv.vel[0]"<<tv.vel[0]<<std::endl;
+//}
+
+//== Tracker Position/Orientation Callback ==--
+void VRPN_CALLBACK track_target(void *, const vrpn_TRACKERCB t)
+{
+  Eigen::Quaterniond qOrig(t.quat[3], t.quat[0], t.quat[1], t.quat[2]);
+  Eigen::Quaterniond qFix(0.70710678, 0.70710678, 0., 0.);
+
+  Eigen::Quaterniond orientation_measured_B_W;
+  Eigen::Vector3d position_measured_W;
+  switch (coordinate_system)
+  {
+    case optitrack:
+    {
+      // Here we rotate the Optitrack measured quaternion by qFix, a
+      // Pi/2 rotation around the x-axis. By doing so we convert from
+      // NED to ENU (I think).
+      orientation_measured_B_W = qFix * qOrig * qFix.inverse();
+      position_measured_W = Eigen::Vector3d(t.pos[0], -t.pos[2], t.pos[1]);
       break;
     }
-    case vicon: {
-      q_rot = q_orig;
-      pos = Eigen::Vector3d(t.pos[0], t.pos[1], t.pos[2]);
+    case vicon:
+    {
+      orientation_measured_B_W = qOrig;
+      position_measured_W = Eigen::Vector3d(t.pos[0], t.pos[1], t.pos[2]);
       break;
     }
-    default: {
+    default:
+    {
       ROS_FATAL("Coordinate system not defined!");
       break;
     }
@@ -125,12 +177,10 @@ void VRPN_CALLBACK track_target(void *, const vrpn_TRACKERCB t) {
       and prev_vrpn_data.pos[0] == t.pos[0] and prev_vrpn_data.pos[1] == t.pos[1]
       and prev_vrpn_data.pos[2] == t.pos[2])
     ROS_WARN("Repeated Values");
-
   prev_vrpn_data = t;
 
-  const int kMicroSecToNanoSec = 1000;
-
   // Somehow the vrpn msgs are in a different time zone.
+  const int kMicroSecToNanoSec = 1000;
   ros::Time timestamp_local = ros::Time::now();
   int timediff_sec = std::round(double(timestamp_local.sec - t.msg_time.tv_sec) / 3600) * 3600;
 
@@ -138,63 +188,107 @@ void VRPN_CALLBACK track_target(void *, const vrpn_TRACKERCB t) {
   ros::Time timestamp = ros::Time(t.msg_time.tv_sec + timediff_sec, timestamp_nsec);
 
   ros::Duration time_diff = ros::Time::now() - timestamp;
-  if(std::abs(time_diff.toSec()) > 0.1) {
-    ROS_WARN_STREAM_THROTTLE(1, "Time delay: " << time_diff);
+  if (std::abs(time_diff.toSec()) > 0.1) {
+    ROS_WARN_STREAM_THROTTLE(1, "Time delay: " << time_diff.toSec());
   }
 
-  target_state->target.transform.translation.x = pos.x();
-  target_state->target.transform.translation.y = pos.y();
-  target_state->target.transform.translation.z = pos.z();
+  // Updating the estimates with the new measurements
+  vicon_odometry_estimator->updateEstimate(position_measured_W, orientation_measured_B_W);
+  vicon_odometry_estimator->publishResults(timestamp);
+  Eigen::Vector3d position_estimate_W = vicon_odometry_estimator->getEstimatedPosition();
+  Eigen::Vector3d velocity_estimate_W = vicon_odometry_estimator->getEstimatedVelocity();
+  Eigen::Quaterniond orientation_estimate_B_W = vicon_odometry_estimator->getEstimatedOrientation();
+  Eigen::Vector3d rate_estimate_B = vicon_odometry_estimator->getEstimatedAngularVelocity();
 
-  target_state->target.transform.rotation.x = q_rot.x();
-  target_state->target.transform.rotation.y = q_rot.y();
-  target_state->target.transform.rotation.z = q_rot.z();
-  target_state->target.transform.rotation.w = q_rot.w();
+  // Rotating the estimated global frame velocity into the body frame
+  Eigen::Vector3d velocity_estimate_B = orientation_estimate_B_W.toRotationMatrix() * velocity_estimate_W;
 
-  target_state->target.header.frame_id = corrdinate_system_string;
-  target_state->target.child_frame_id = frame_id;
+  // Populating topic contents. Published in main loop
   target_state->target.header.stamp = timestamp;
+  target_state->target.header.frame_id = coordinate_system_string;
+  target_state->target.child_frame_id = frame_id;
+  target_state->target.transform.translation.x = position_estimate_W.x();
+  target_state->target.transform.translation.y = position_estimate_W.y();
+  target_state->target.transform.translation.z = position_estimate_W.z();
+  target_state->target.transform.rotation.x = orientation_estimate_B_W.x();
+  target_state->target.transform.rotation.y = orientation_estimate_B_W.y();
+  target_state->target.transform.rotation.z = orientation_estimate_B_W.z();
+  target_state->target.transform.rotation.w = orientation_estimate_B_W.w();
 
+  // Assemble odometry message.
+  target_state->odometry.header.stamp = timestamp;
+  target_state->odometry.header.frame_id = coordinate_system_string;
+  target_state->odometry.child_frame_id = frame_id;
+  target_state->odometry.pose.pose.position.x = position_estimate_W.x();
+  target_state->odometry.pose.pose.position.y = position_estimate_W.y();
+  target_state->odometry.pose.pose.position.z = position_estimate_W.z();
+  target_state->odometry.pose.pose.orientation.w = orientation_estimate_B_W.w();
+  target_state->odometry.pose.pose.orientation.x = orientation_estimate_B_W.x();
+  target_state->odometry.pose.pose.orientation.y = orientation_estimate_B_W.y();
+  target_state->odometry.pose.pose.orientation.z = orientation_estimate_B_W.z();
+  target_state->odometry.twist.twist.linear.x = velocity_estimate_B.x();
+  target_state->odometry.twist.twist.linear.y = velocity_estimate_B.y();
+  target_state->odometry.twist.twist.linear.z = velocity_estimate_B.z();
+  target_state->odometry.twist.twist.angular.x = rate_estimate_B.x();
+  target_state->odometry.twist.twist.angular.y = rate_estimate_B.y();
+  target_state->odometry.twist.twist.angular.z = rate_estimate_B.z();
+
+  // Indicating to the main loop the data is ready for publishing 
   fresh_data = true;
 }
 
-int main(int argc, char* argv[]) {
+int main(int argc, char* argv[])
+{
   ros::init(argc, argv, "ros_vrpn_client");
   ros::NodeHandle nh("~");
 
   target_state = new TargetState;
-  //frame_id = nh.getNamespace().substr(1);
   frame_id = nh.getNamespace();
 
   std::string vrpn_server_ip;
   int vrpn_port;
-  std::string tracked_object_name;
+  std::string trackedObjectName;
 
   nh.param<std::string>("vrpn_server_ip", vrpn_server_ip, std::string());
   nh.param<int>("vrpn_port", vrpn_port, 3883);
-  nh.param<std::string>("vrpn_coordinate_system", corrdinate_system_string, "vicon");
+  nh.param<std::string>("vrpn_coordinate_system", coordinate_system_string, "vicon");
 
   std::cout << "vrpn_server_ip:" << vrpn_server_ip << std::endl;
   std::cout << "vrpn_port:" << vrpn_port << std::endl;
-  std::cout << "vrpn_coordinate_system:" << corrdinate_system_string << std::endl;
+  std::cout << "vrpn_coordinate_system:" << coordinate_system_string << std::endl;
 
-  if (corrdinate_system_string == std::string("vicon")) {
+  if (coordinate_system_string == std::string("vicon"))
+  {
 
-  } else if (corrdinate_system_string == std::string("optitrack")) {
+  }
+  else if (coordinate_system_string == std::string("optitrack"))
+  {
 
-  } else {
+  }
+  else
+  {
     ROS_FATAL("ROS param vrpn_coordinate_system should be either 'vicon' or 'optitrack'!");
   }
 
+  // Creating the estimator
+  vicon_odometry_estimator = new vicon_estimator::ViconOdometryEstimator(nh);
+  vicon_odometry_estimator->initializeParameters(nh);
+  vicon_odometry_estimator->reset();
+
+  // Creating object which handles data publishing
   Rigid_Body tool(nh, vrpn_server_ip, vrpn_port);
 
   ros::Rate loop_rate(1000);  //TODO(gohlp): fix this
 
-  while (ros::ok()) {
+  while (ros::ok())
+  {
     tool.step_vrpn();
-    //vrpn_SleepMsecs(10);
-    if (fresh_data == true) {  // only publish when receive data over VRPN.
+
+    // only publish when receive data over VRPN.
+    if (fresh_data == true)
+    {
       tool.publish_target_state(target_state);
+      tool.publish_odometry(target_state);
       fresh_data = false;
     }
     //ros::spinOnce();
@@ -202,4 +296,3 @@ int main(int argc, char* argv[]) {
   }
   return 0;
 }
-

@@ -1,8 +1,9 @@
 <launch>
   <arg name="object_name" default="auk" />
-  <node name="$(arg object_name)" type="ros_vrpn_client" pkg="ros_vrpn_client" output="screen">
+  <node name="vrpn_$(arg object_name)" type="ros_vrpn_client" pkg="ros_vrpn_client" output="screen">
     <param name="vrpn_server_ip" value="vicon" />
     <param name="vrpn_coordinate_system" value="vicon" />
+    <param name="object_name" value="$(arg object_name)" />
     <param name="vicon_estimator/dt" value="0.01" />
     <param name="translational_estimator/kp" value="1.0" />
     <param name="translational_estimator/kv" value="10.0" />

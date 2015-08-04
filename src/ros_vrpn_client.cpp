@@ -201,11 +201,7 @@ void VRPN_CALLBACK track_target(void *, const vrpn_TRACKERCB t)
   Eigen::Vector3d rate_estimate_B = vicon_odometry_estimator->getEstimatedAngularVelocity();
 
   // Rotating the estimated global frame velocity into the body frame
-  //TODO(millanea): Need to check the direction of rotation returned by the
-  //                vicon system to ensure that this rotation is being performed
-  //                correctly.
   Eigen::Vector3d velocity_estimate_B = orientation_estimate_B_W.toRotationMatrix() * velocity_estimate_W;
-  // Eigen::Vector3d velocity_estimate_B = orientation_estimate_W_B.toRotationMatrix().inverse() * velocity_estimate_W;
 
   // Populating topic contents. Published in main loop
   target_state->target.header.stamp = timestamp;

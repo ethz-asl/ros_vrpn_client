@@ -1,7 +1,0 @@
-<launch>
-  <node name="vrpn_bluebird" type="ros_vrpn_client" pkg="ros_vrpn_client" output="screen">
-    <param name="vrpn_server_ip" value="vicon" />
-    <param name="vrpn_coordinate_system" value="vicon" />
-    <param name="object_name" value="bluebird" />
-  </node>
-</launch>

@@ -38,6 +38,7 @@
 #include <nav_msgs/Odometry.h>
 #include <stdio.h>
 #include <math.h>
+#include <iostream>
 
 #include <vrpn_Connection.h>
 #include <vrpn_Tracker.h>
@@ -62,7 +63,7 @@ class TargetState
 };
 
 TargetState *target_state;
-std::string frame_id;
+std::string object_name;
 std::string coordinate_system_string;
 
 enum CoordinateSystem
@@ -88,14 +89,14 @@ class Rigid_Body
   vrpn_Tracker_Remote *tracker;
 
  public:
-  Rigid_Body(ros::NodeHandle& nh, std::string server_ip, int port)
+  Rigid_Body(ros::NodeHandle& nh, std::string server_ip, int port, const std::string& object_name)
   {
     target_pub = nh.advertise<geometry_msgs::TransformStamped>("pose", 100);
     odometry_pub = nh.advertise<nav_msgs::Odometry>("odometry", 100);
-    std::string connection_name = server_ip + ":" + boost::lexical_cast<std::string>(port);
-    connection = vrpn_get_connection_by_name(connection_name.c_str());
-    std::string target_name = nh.getNamespace().substr(1);
-    tracker = new vrpn_Tracker_Remote(target_name.c_str(), connection);
+    std::stringstream connection_name;
+    connection_name << server_ip << ":" << port;
+    connection = vrpn_get_connection_by_name(connection_name.str().c_str());
+    tracker = new vrpn_Tracker_Remote(object_name.c_str(), connection);
 
     tracker->print_latest_report();
     this->tracker->register_change_handler(NULL, track_target);
@@ -206,7 +207,7 @@ void VRPN_CALLBACK track_target(void *, const vrpn_TRACKERCB t)
   // Populating topic contents. Published in main loop
   target_state->target.header.stamp = timestamp;
   target_state->target.header.frame_id = coordinate_system_string;
-  target_state->target.child_frame_id = frame_id;
+  target_state->target.child_frame_id = object_name;
   target_state->target.transform.translation.x = position_estimate_W.x();
   target_state->target.transform.translation.y = position_estimate_W.y();
   target_state->target.transform.translation.z = position_estimate_W.z();
@@ -218,7 +219,7 @@ void VRPN_CALLBACK track_target(void *, const vrpn_TRACKERCB t)
   // Assemble odometry message.
   target_state->odometry.header.stamp = timestamp;
   target_state->odometry.header.frame_id = coordinate_system_string;
-  target_state->odometry.child_frame_id = frame_id;
+  target_state->odometry.child_frame_id = object_name;
   target_state->odometry.pose.pose.position.x = position_estimate_W.x();
   target_state->odometry.pose.pose.position.y = position_estimate_W.y();
   target_state->odometry.pose.pose.position.z = position_estimate_W.z();
@@ -239,11 +240,10 @@ void VRPN_CALLBACK track_target(void *, const vrpn_TRACKERCB t)
 
 int main(int argc, char* argv[])
 {
-  ros::init(argc, argv, "ros_vrpn_client");
+  ros::init(argc, argv, "ros_vrpn_client", ros::init_options::AnonymousName);
   ros::NodeHandle nh("~");
 
   target_state = new TargetState;
-  frame_id = nh.getNamespace();
 
   std::string vrpn_server_ip;
   int vrpn_port;
@@ -252,10 +252,12 @@ int main(int argc, char* argv[])
   nh.param<std::string>("vrpn_server_ip", vrpn_server_ip, std::string());
   nh.param<int>("vrpn_port", vrpn_port, 3883);
   nh.param<std::string>("vrpn_coordinate_system", coordinate_system_string, "vicon");
+  nh.param<std::string>("object_name", object_name, "bluebird");
 
   std::cout << "vrpn_server_ip:" << vrpn_server_ip << std::endl;
   std::cout << "vrpn_port:" << vrpn_port << std::endl;
   std::cout << "vrpn_coordinate_system:" << coordinate_system_string << std::endl;
+  std::cout << "object_name:" << object_name << std::endl;
 
   if (coordinate_system_string == std::string("vicon"))
   {
@@ -276,7 +278,7 @@ int main(int argc, char* argv[])
   vicon_odometry_estimator->reset();
 
   // Creating object which handles data publishing
-  Rigid_Body tool(nh, vrpn_server_ip, vrpn_port);
+  Rigid_Body tool(nh, vrpn_server_ip, vrpn_port, object_name);
 
   ros::Rate loop_rate(1000);  //TODO(gohlp): fix this
 

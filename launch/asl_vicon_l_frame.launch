@@ -1,6 +1,0 @@
-<launch>
-  <node name="l_frame" type="ros_vrpn_client" pkg="ros_vrpn_client" output="screen">
-    <param name="vrpn_server_ip" value="vicon" />
-    <param name="vrpn_coordinate_system" value="vicon" />
-  </node>
-</launch>

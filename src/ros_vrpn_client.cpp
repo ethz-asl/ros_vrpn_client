@@ -91,8 +91,8 @@ class Rigid_Body
  public:
   Rigid_Body(ros::NodeHandle& nh, std::string server_ip, int port, const std::string& object_name)
   {
-    target_pub = nh.advertise<geometry_msgs::TransformStamped>("pose", 100);
-    odometry_pub = nh.advertise<nav_msgs::Odometry>("odometry", 100);
+    target_pub = nh.advertise<geometry_msgs::TransformStamped>("vrpn/pose", 100);
+    odometry_pub = nh.advertise<nav_msgs::Odometry>("vrpn/odometry", 100);
     std::stringstream connection_name;
     connection_name << server_ip << ":" << port;
     connection = vrpn_get_connection_by_name(connection_name.str().c_str());
@@ -241,7 +241,8 @@ void VRPN_CALLBACK track_target(void *, const vrpn_TRACKERCB t)
 int main(int argc, char* argv[])
 {
   ros::init(argc, argv, "ros_vrpn_client", ros::init_options::AnonymousName);
-  ros::NodeHandle nh("~");
+  ros::NodeHandle nh("");
+  ros::NodeHandle private_nh("~");
 
   target_state = new TargetState;
 
@@ -249,10 +250,10 @@ int main(int argc, char* argv[])
   int vrpn_port;
   std::string trackedObjectName;
 
-  nh.param<std::string>("vrpn_server_ip", vrpn_server_ip, std::string());
-  nh.param<int>("vrpn_port", vrpn_port, 3883);
-  nh.param<std::string>("vrpn_coordinate_system", coordinate_system_string, "vicon");
-  nh.param<std::string>("object_name", object_name, "bluebird");
+  private_nh.param<std::string>("vrpn_server_ip", vrpn_server_ip, std::string());
+  private_nh.param<int>("vrpn_port", vrpn_port, 3883);
+  private_nh.param<std::string>("vrpn_coordinate_system", coordinate_system_string, "vicon");
+  private_nh.param<std::string>("object_name", object_name, "bluebird");
 
   std::cout << "vrpn_server_ip:" << vrpn_server_ip << std::endl;
   std::cout << "vrpn_port:" << vrpn_port << std::endl;
@@ -274,7 +275,7 @@ int main(int argc, char* argv[])
 
   // Creating the estimator
   vicon_odometry_estimator = new vicon_estimator::ViconOdometryEstimator(nh);
-  vicon_odometry_estimator->initializeParameters(nh);
+  vicon_odometry_estimator->initializeParameters(private_nh);
   vicon_odometry_estimator->reset();
 
   // Creating object which handles data publishing

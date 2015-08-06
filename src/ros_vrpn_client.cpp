@@ -242,6 +242,7 @@ int main(int argc, char* argv[])
 {
   ros::init(argc, argv, "ros_vrpn_client", ros::init_options::AnonymousName);
   ros::NodeHandle nh("");
+  ros::NodeHandle private_nh("~");
 
   target_state = new TargetState;
 
@@ -274,7 +275,7 @@ int main(int argc, char* argv[])
 
   // Creating the estimator
   vicon_odometry_estimator = new vicon_estimator::ViconOdometryEstimator(nh);
-  vicon_odometry_estimator->initializeParameters(nh);
+  vicon_odometry_estimator->initializeParameters(private_nh);
   vicon_odometry_estimator->reset();
 
   // Creating object which handles data publishing

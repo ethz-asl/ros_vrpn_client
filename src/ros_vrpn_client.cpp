@@ -250,10 +250,10 @@ int main(int argc, char* argv[])
   int vrpn_port;
   std::string trackedObjectName;
 
-  nh.param<std::string>("vrpn_server_ip", vrpn_server_ip, std::string());
-  nh.param<int>("vrpn_port", vrpn_port, 3883);
-  nh.param<std::string>("vrpn_coordinate_system", coordinate_system_string, "vicon");
-  nh.param<std::string>("object_name", object_name, "bluebird");
+  private_nh.param<std::string>("vrpn_server_ip", vrpn_server_ip, std::string());
+  private_nh.param<int>("vrpn_port", vrpn_port, 3883);
+  private_nh.param<std::string>("vrpn_coordinate_system", coordinate_system_string, "vicon");
+  private_nh.param<std::string>("object_name", object_name, "bluebird");
 
   std::cout << "vrpn_server_ip:" << vrpn_server_ip << std::endl;
   std::cout << "vrpn_port:" << vrpn_port << std::endl;

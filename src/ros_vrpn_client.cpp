@@ -91,8 +91,8 @@ class Rigid_Body
  public:
   Rigid_Body(ros::NodeHandle& nh, std::string server_ip, int port, const std::string& object_name)
   {
-    target_pub = nh.advertise<geometry_msgs::TransformStamped>("pose", 100);
-    odometry_pub = nh.advertise<nav_msgs::Odometry>("odometry", 100);
+    target_pub = nh.advertise<geometry_msgs::TransformStamped>("vrpn/pose", 100);
+    odometry_pub = nh.advertise<nav_msgs::Odometry>("vrpn/odometry", 100);
     std::stringstream connection_name;
     connection_name << server_ip << ":" << port;
     connection = vrpn_get_connection_by_name(connection_name.str().c_str());
@@ -241,7 +241,7 @@ void VRPN_CALLBACK track_target(void *, const vrpn_TRACKERCB t)
 int main(int argc, char* argv[])
 {
   ros::init(argc, argv, "ros_vrpn_client", ros::init_options::AnonymousName);
-  ros::NodeHandle nh("~");
+  ros::NodeHandle nh("");
 
   target_state = new TargetState;
 

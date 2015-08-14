@@ -54,6 +54,11 @@ void ViconOdometryEstimator::initializeParameters(ros::NodeHandle& nh)
               rotationalEstimatorParameters.drate_process_covariance_);
   nh.getParam("rotational_estimator/orientation_measurementCovariance",
               rotationalEstimatorParameters.orientation_measurement_covariance_);
+  nh.getParam("rotational_estimator/outlier_threshold_degrees",
+              rotationalEstimatorParameters.outlier_threshold_degrees_);
+  nh.getParam("rotational_estimator/maximum_outlier_count",
+              rotationalEstimatorParameters.maximum_outlier_count_);
+
   // Setting parameters in estimator
   vicon_estimator_.setParameters(translationalEstimatorParameters, rotationalEstimatorParameters);
 }

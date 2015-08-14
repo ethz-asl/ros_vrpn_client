@@ -130,6 +130,8 @@ static const Eigen::Quaterniond kDefaultInitialOrientationEstimate = Eigen::Quat
 static const Eigen::Vector3d kDefaultInitialRateEstimate = Eigen::Vector3d::Zero();
 static const Eigen::Vector3d kDefaultInitialDorientationEstimate = Eigen::Vector3d::Zero();
 static const Eigen::Vector3d kDefaultInitialDrateEstimate = Eigen::Vector3d::Zero();
+static const double kDefaultOutlierThresholdDegrees = 30.0;
+static const int kDefaultMaximumOutlierCount = 10;
 
 class RotationalEstimatorParameters
 {
@@ -146,7 +148,9 @@ class RotationalEstimatorParameters
         initial_orientation_estimate_(kDefaultInitialOrientationEstimate),
         initial_rate_estimate_(kDefaultInitialRateEstimate),
         initial_dorientation_estimate_(kDefaultInitialDorientationEstimate),
-        initial_drate_estimate_(kDefaultInitialDrateEstimate)
+        initial_drate_estimate_(kDefaultInitialDrateEstimate),
+        outlier_threshold_degrees_(kDefaultOutlierThresholdDegrees),
+        maximum_outlier_count_(kDefaultMaximumOutlierCount)
   { };
 
   double dt_;
@@ -159,6 +163,8 @@ class RotationalEstimatorParameters
   Eigen::Vector3d initial_rate_estimate_;
   Eigen::Vector3d initial_dorientation_estimate_;
   Eigen::Vector3d initial_drate_estimate_;
+  double outlier_threshold_degrees_;
+  int maximum_outlier_count_;
 };
 
 class RotationalEstimatorResults
@@ -224,6 +230,11 @@ class RotationalEstimator
   Eigen::Matrix<double, 6, 6> process_covariance_;
   Eigen::Matrix<double, 4, 4> measurement_covariance_;
 
+  // Last measurement
+  Eigen::Quaterniond orientation_measured_old;
+  bool first_measurement_flag;
+  int outlier_counter;
+
   // Function to generate a skew symmetric matrix from a vector
   Eigen::Matrix3d skewMatrix(const Eigen::Vector3d& vec) const;
   // Serial of functions performing the estimate update steps
@@ -248,6 +259,12 @@ class RotationalEstimator
   void updateEstimateRecombineErrorGlobal(  const Eigen::Matrix<double, 7, 1> x_priori,
                                             Eigen::Matrix<double, 7, 1>* x_measurement,
                                             Eigen::Matrix<double, 6, 1>* dx_measurement);
+
+  // Detects if the passed measurement is an outlier
+  bool detectMeasurementOutlier(const Eigen::Quaterniond& orientation_measured);
+  // Returns the magnitude of the rotation represented by a quaternion
+  double quaternionRotationMagnitude(const Eigen::Quaterniond& rotation);
+
 };
 
 class ViconEstimator

@@ -313,6 +313,118 @@ TEST(rotationalEstimator, sinusoidal_clean)
 
 }
 
+// Quaternions representing flips in various dimensions
+const int kNumberOfInversions = 7;
+const Eigen::Quaterniond rotation_inversion_x = Eigen::Quaterniond(Eigen::AngleAxisd(M_PI, Eigen::Vector3d::UnitX()));
+const Eigen::Quaterniond rotation_inversion_y = Eigen::Quaterniond(Eigen::AngleAxisd(M_PI, Eigen::Vector3d::UnitY()));
+const Eigen::Quaterniond rotation_inversion_z = Eigen::Quaterniond(Eigen::AngleAxisd(M_PI, Eigen::Vector3d::UnitZ()));
+const Eigen::Quaterniond rotation_inversion_xy = rotation_inversion_x * rotation_inversion_y;
+const Eigen::Quaterniond rotation_inversion_yz = rotation_inversion_y * rotation_inversion_z;
+const Eigen::Quaterniond rotation_inversion_xz = rotation_inversion_x * rotation_inversion_z;
+const Eigen::Quaterniond rotation_inversion_xyz = rotation_inversion_x * rotation_inversion_y * rotation_inversion_z;
+const Eigen::Quaterniond rotation_inversions[kNumberOfInversions] = { rotation_inversion_x,
+                                                                      rotation_inversion_y, 
+                                                                      rotation_inversion_z,
+                                                                      rotation_inversion_xy,
+                                                                      rotation_inversion_yz, 
+                                                                      rotation_inversion_xz,
+                                                                      rotation_inversion_xyz };
+
+void generateCorruptedInputTrajectory(const Eigen::Quaterniond clean_trajectory[], const int trajectory_length, const int corruption_rate, Eigen::Quaterniond corrupted_trajectory[])
+{
+  // Looping over the clean input trajecty and corruputing measurements at a rate determined by corruption_rate
+  // Note that corruption starts only after corruption_rate samples.
+  int inversion_index = 0;
+  for(int i = corruption_rate; i <= trajectory_length; i+=corruption_rate)
+  {
+    // Corrupting the measurement with an inversion from the inversion list
+    corrupted_trajectory[i] = rotation_inversions[inversion_index]*clean_trajectory[i];
+    //corrupted_trajectory[i] = clean_trajectory[i];
+    // Incrementing the inversion
+    inversion_index = (inversion_index + 1) % kNumberOfInversions;
+  }
+}
+
+
+TEST(rotationalEstimator, sinusoidal_corrupted)
+{
+  // Creating the estimator
+  vicon_estimator::RotationalEstimator rotational_estimator;
+
+  // Setting the estimator gains
+  vicon_estimator::RotationalEstimatorParameters rotational_estimator_parameters;
+  rotational_estimator_parameters.dt_ = ROT_TRAJECTORY_DT;
+  rotational_estimator_parameters.dorientation_estimate_initial_covariance_ = 1;
+  rotational_estimator_parameters.drate_estimate_initial_covariance_ = 1;
+  rotational_estimator_parameters.dorientation_process_covariance_ = 0.01;
+  rotational_estimator_parameters.drate_process_covariance_ = 1000 * 1;
+  rotational_estimator_parameters.orientation_measurement_covariance_ = 0.0005;
+  rotational_estimator.setParameters(rotational_estimator_parameters);
+  rotational_estimator.reset();
+
+  // Generating the trajectory over which to test the estimator
+  const int trajectory_length = static_cast<int>(ROT_TRAJECTORY_PERIOD / ROT_TRAJECTORY_DT) + 1;
+  double orientation_trajectory[trajectory_length][4], omega_trajectory[trajectory_length][3];
+  generateRotationalTrajectorySinusoidal(orientation_trajectory, omega_trajectory, trajectory_length);
+
+
+
+  // Constructing the measurement vector
+  Eigen::Quaterniond clean_input_trajectory[trajectory_length];
+  Eigen::Quaterniond corrupted_input_trajectory[trajectory_length];
+  // Creating the clean measurement vector
+  for (int i = 0; i < trajectory_length; i++) {
+    clean_input_trajectory[i] = Eigen::Quaterniond(orientation_trajectory[i][0], orientation_trajectory[i][1], orientation_trajectory[i][2], orientation_trajectory[i][3]);
+    corrupted_input_trajectory[i] = Eigen::Quaterniond(orientation_trajectory[i][0], orientation_trajectory[i][1], orientation_trajectory[i][2], orientation_trajectory[i][3]);
+  }
+  // Corrupting the measurement vector
+  int corruption_rate = 100; //TODO(millanea): Parameter above.
+  generateCorruptedInputTrajectory(clean_input_trajectory, trajectory_length, corruption_rate, corrupted_input_trajectory);
+
+
+  // Looping over trajectory and retrieving estimates
+  double orientation_estimate_trajectory[trajectory_length][4];
+  double rollrate_estimate_trajectory[trajectory_length][3];
+  for (int i = 0; i < trajectory_length; i++) {
+    // Updating the estimate with the measurement
+    rotational_estimator.updateEstimate(corrupted_input_trajectory[i]);
+    // Getting the position and velocity estimates
+    Eigen::Quaterniond estimated_orientation = rotational_estimator.getEstimatedOrientation();
+    Eigen::Vector3d estimated_rollrate = rotational_estimator.getEstimatedRate();
+    // Moving values to arrays
+    orientation_estimate_trajectory[i][0] = estimated_orientation.w();
+    orientation_estimate_trajectory[i][1] = estimated_orientation.x();
+    orientation_estimate_trajectory[i][2] = estimated_orientation.y();
+    orientation_estimate_trajectory[i][3] = estimated_orientation.z();
+    rollrate_estimate_trajectory[i][0] = estimated_rollrate.x();
+    rollrate_estimate_trajectory[i][1] = estimated_rollrate.y();
+    rollrate_estimate_trajectory[i][2] = estimated_rollrate.z();
+  }
+
+  // Start index for error calculation
+  const int start_index = trajectory_length / 2;
+
+  // Calculating position estimate errors
+  double orientation_error[3];
+  calculateQuaternionRmsError(orientation_trajectory, orientation_estimate_trajectory, trajectory_length, start_index, orientation_error);
+
+  // Performing test
+  EXPECT_NEAR(orientation_error[0], 0, QUAT_ERROR_THRESHOLD) << "X errorquaternion estimate error too great";
+  EXPECT_NEAR(orientation_error[1], 0, QUAT_ERROR_THRESHOLD) << "Y errorquaternion estimate error too great";
+  EXPECT_NEAR(orientation_error[2], 0, QUAT_ERROR_THRESHOLD) << "Z errorquaternion estimate error too great";
+
+  // Calculating velocity estimate errors
+  double omegaError[3];
+  calculate3dRmsError(omega_trajectory, rollrate_estimate_trajectory, trajectory_length,
+                      start_index, omegaError);
+
+  // Performing test
+  EXPECT_NEAR(omegaError[0], 0, OMEGA_ERROR_THRESHOLD) << "X rotational velocity estimate error too great";
+  EXPECT_NEAR(omegaError[1], 0, OMEGA_ERROR_THRESHOLD) << "Y rotational velocity estimate error too great";
+  EXPECT_NEAR(omegaError[2], 0, OMEGA_ERROR_THRESHOLD) << "Z rotational velocity estimate error too great";
+
+}
+
 /*
  *  GTests Main
  */

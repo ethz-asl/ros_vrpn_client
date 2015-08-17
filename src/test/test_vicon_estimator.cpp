@@ -315,14 +315,13 @@ TEST(rotationalEstimator, sinusoidal_clean)
 
 // Quaternions representing flips in various dimensions
 const int kNumberOfInversions = 7;
-const Eigen::Quaterniond rotation_inversion_x = Eigen::Quaterniond(1/sqrt(2), 1/sqrt(2), 0, 0);
-const Eigen::Quaterniond rotation_inversion_y = Eigen::Quaterniond(1/sqrt(2), 0, 1/sqrt(2), 0);
-const Eigen::Quaterniond rotation_inversion_z = Eigen::Quaterniond(-1/sqrt(2), 0, 0, -1/sqrt(2));
+const Eigen::Quaterniond rotation_inversion_x = Eigen::Quaterniond(Eigen::AngleAxisd(M_PI, Eigen::Vector3d::UnitX()));
+const Eigen::Quaterniond rotation_inversion_y = Eigen::Quaterniond(Eigen::AngleAxisd(M_PI, Eigen::Vector3d::UnitY()));
+const Eigen::Quaterniond rotation_inversion_z = Eigen::Quaterniond(Eigen::AngleAxisd(M_PI, Eigen::Vector3d::UnitZ()));
 const Eigen::Quaterniond rotation_inversion_xy = rotation_inversion_x * rotation_inversion_y;
 const Eigen::Quaterniond rotation_inversion_yz = rotation_inversion_y * rotation_inversion_z;
 const Eigen::Quaterniond rotation_inversion_xz = rotation_inversion_x * rotation_inversion_z;
 const Eigen::Quaterniond rotation_inversion_xyz = rotation_inversion_x * rotation_inversion_y * rotation_inversion_z;
-
 const Eigen::Quaterniond rotation_inversions[kNumberOfInversions] = { rotation_inversion_x,
                                                                       rotation_inversion_y, 
                                                                       rotation_inversion_z,
@@ -333,9 +332,6 @@ const Eigen::Quaterniond rotation_inversions[kNumberOfInversions] = { rotation_i
 
 void generateCorruptedInputTrajectory(const Eigen::Quaterniond clean_trajectory[], const int trajectory_length, const int corruption_rate, Eigen::Quaterniond corrupted_trajectory[])
 {
-
-  // Creating eroneous measurements by flipping in certain axes.
-
   // Looping over the clean input trajecty and corruputing measurements at a rate determined by corruption_rate
   // Note that corruption starts only after corruption_rate samples.
   int inversion_index = 0;

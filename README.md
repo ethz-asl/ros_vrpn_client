@@ -24,8 +24,11 @@ Old Installation HowTo
 ===============
 Installation Ubuntu
 -------------------
-Use install_vrpn.sh to download, compile, and install VRPN.
-Please consult the VRPN website if your run into some trouble.
+A catkinized version of VRPN can be found here: https://github.com/ethz-asl/vrpn_catkin
+
+Alternative:
+ Use install_vrpn.sh to download, compile, and install VRPN.
+ Please consult the VRPN website if your run into some trouble.
 
 Installation OS X
 -----------------

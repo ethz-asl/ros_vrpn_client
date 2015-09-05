@@ -12,7 +12,7 @@ Usage
 -----------------
 You have to start a ROS node per tracked object and the ROS node name has to be the name of the trackable onject.
  
-     rosrun ros_vrpn_client ros_vrpn_client _object_name:=object_name _vrpn_server_ip:192.168.1.1
+     rosrun ros_vrpn_client ros_vrpn_client _object_name:=object_name _vrpn_server_ip:=192.168.1.1
 
 Or in a launch file:
 

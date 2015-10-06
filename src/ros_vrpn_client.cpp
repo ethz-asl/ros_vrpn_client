@@ -43,6 +43,7 @@
 #include <vrpn_Connection.h>
 #include <vrpn_Tracker.h>
 #include <Eigen/Geometry>
+#include <eigen_conversions/eigen_msg.h>
 
 #include "vicon_odometry_estimator.h"
 
@@ -172,7 +173,7 @@ void VRPN_CALLBACK track_target(void *, const vrpn_TRACKERCB t)
     }
   }
 
-  // verifying that each callback indeed gives fresh data.
+  // Verifying that each callback indeed gives fresh data.
   if (prev_vrpn_data.quat[0] == t.quat[0] and prev_vrpn_data.quat[1] == t.quat[1]
       and prev_vrpn_data.quat[2] == t.quat[2] and prev_vrpn_data.quat[3] == t.quat[3]
       and prev_vrpn_data.pos[0] == t.pos[0] and prev_vrpn_data.pos[1] == t.pos[1]
@@ -204,35 +205,15 @@ void VRPN_CALLBACK track_target(void *, const vrpn_TRACKERCB t)
   // Rotating the estimated global frame velocity into the body frame
   Eigen::Vector3d velocity_estimate_B = orientation_estimate_B_W.toRotationMatrix() * velocity_estimate_W;
 
-  // Populating topic contents. Published in main loop
-  target_state->target.header.stamp = timestamp;
-  target_state->target.header.frame_id = coordinate_system_string;
-  target_state->target.child_frame_id = object_name;
-  target_state->target.transform.translation.x = position_estimate_W.x();
-  target_state->target.transform.translation.y = position_estimate_W.y();
-  target_state->target.transform.translation.z = position_estimate_W.z();
-  target_state->target.transform.rotation.x = orientation_estimate_B_W.x();
-  target_state->target.transform.rotation.y = orientation_estimate_B_W.y();
-  target_state->target.transform.rotation.z = orientation_estimate_B_W.z();
-  target_state->target.transform.rotation.w = orientation_estimate_B_W.w();
+  // Populate the transform message. Published in main loop
+  tf::vectorEigenToMsg(position_estimate_W, target_state->target.transform.translation);
+  tf::quaternionEigenToMsg(orientation_estimate_B_W, target_state->target.transform.rotation);
 
-  // Assemble odometry message.
-  target_state->odometry.header.stamp = timestamp;
-  target_state->odometry.header.frame_id = coordinate_system_string;
-  target_state->odometry.child_frame_id = object_name;
-  target_state->odometry.pose.pose.position.x = position_estimate_W.x();
-  target_state->odometry.pose.pose.position.y = position_estimate_W.y();
-  target_state->odometry.pose.pose.position.z = position_estimate_W.z();
-  target_state->odometry.pose.pose.orientation.w = orientation_estimate_B_W.w();
-  target_state->odometry.pose.pose.orientation.x = orientation_estimate_B_W.x();
-  target_state->odometry.pose.pose.orientation.y = orientation_estimate_B_W.y();
-  target_state->odometry.pose.pose.orientation.z = orientation_estimate_B_W.z();
-  target_state->odometry.twist.twist.linear.x = velocity_estimate_B.x();
-  target_state->odometry.twist.twist.linear.y = velocity_estimate_B.y();
-  target_state->odometry.twist.twist.linear.z = velocity_estimate_B.z();
-  target_state->odometry.twist.twist.angular.x = rate_estimate_B.x();
-  target_state->odometry.twist.twist.angular.y = rate_estimate_B.y();
-  target_state->odometry.twist.twist.angular.z = rate_estimate_B.z();
+  // Populate the odometry message. Published in main loop
+  tf::pointEigenToMsg(position_estimate_W, target_state->odometry.pose.pose.position);
+  tf::quaternionEigenToMsg(orientation_estimate_B_W, target_state->odometry.pose.pose.orientation);
+  tf::vectorEigenToMsg(velocity_estimate_B, target_state->odometry.twist.twist.linear);
+  tf::vectorEigenToMsg(rate_estimate_B, target_state->odometry.twist.twist.angular);
 
   // Indicating to the main loop the data is ready for publishing 
   fresh_data = true;

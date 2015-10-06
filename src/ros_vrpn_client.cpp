@@ -63,9 +63,10 @@ void VRPN_CALLBACK track_target(void *, const vrpn_TRACKERCB tracker);
 // A class representing the state of the tracked target.
 class TargetState
 {
- public:
-  geometry_msgs::TransformStamped target;
-  nav_msgs::Odometry odometry;
+  public:
+    geometry_msgs::TransformStamped measured_transform;
+    geometry_msgs::TransformStamped estimated_transform;
+    nav_msgs::Odometry estimated_odometry;
 };
 
 // Available coordinate systems.
@@ -94,9 +95,9 @@ class Rigid_Body {
     Rigid_Body(ros::NodeHandle& nh, std::string server_ip, int port, const std::string& object_name)
     {
       // Advertising published topics.
+      measured_target_transform_publisher = nh.advertise<geometry_msgs::TransformStamped>("vicon", 10);
       estimated_target_transform_publisher = nh.advertise<geometry_msgs::TransformStamped>("pose", 10);
       estimated_target_odometry_publisher = nh.advertise<nav_msgs::Odometry>("odometry", 10);
-      //raw_target_odometry_publisher = nh.advertise<geometry_msgs::TransformStamped>("raw_vicon", 10);
       // Connecting to the vprn device and creating an associated tracker.
       std::stringstream connection_name;
       connection_name << server_ip << ":" << port;
@@ -112,17 +113,23 @@ class Rigid_Body {
       //this->tracker->register_change_handler(NULL, track_target_acceleration);
     }
 
+    // Publishes the raw measured target state to the transform message.
+    void publish_measured_transform(TargetState *target_state)
+    {
+      measured_target_transform_publisher.publish(target_state->measured_transform);
+    }
+
     // Publishes the estimated target state to the transform message and sends tranform.
     void publish_estimated_transform(TargetState *target_state)
     {
-      br.sendTransform(target_state->target);
-      estimated_target_transform_publisher.publish(target_state->target);
+      br.sendTransform(target_state->estimated_transform);
+      estimated_target_transform_publisher.publish(target_state->estimated_transform);
     }
 
     // Publishes the estimated target state to the odometry message.
     void publish_estimated_odometry(TargetState *target_state)
     {
-      estimated_target_odometry_publisher.publish(target_state->odometry);
+      estimated_target_odometry_publisher.publish(target_state->estimated_odometry);
     }
 
     // Passes contol to the vrpn client.
@@ -134,9 +141,9 @@ class Rigid_Body {
 
   private:
     // Publishers
+    ros::Publisher measured_target_transform_publisher;
     ros::Publisher estimated_target_transform_publisher;
     ros::Publisher estimated_target_odometry_publisher;
-    //ros::Publisher raw_target_odometry_publisher;
     tf::TransformBroadcaster br;
     // Vprn object pointers
     vrpn_Connection *connection;
@@ -189,7 +196,6 @@ void inline correctForCoordinateSystem(const Eigen::Quaterniond& orientation_in,
       break;
     }
   }
-
 }
 
 // Compares two instances of tracker data for equality
@@ -235,7 +241,7 @@ void VRPN_CALLBACK track_target(void *, const vrpn_TRACKERCB tracker)
     ROS_WARN_STREAM_THROTTLE(1, "Time delay: " << time_diff.toSec());
   }
 
-  // Updating the estimates with the new measurements
+  // Updating the estimates with the new measurements.
   vicon_odometry_estimator->updateEstimate(position_measured_W, orientation_measured_B_W);
   vicon_odometry_estimator->publishResults(timestamp);
   Eigen::Vector3d position_estimate_W = vicon_odometry_estimator->getEstimatedPosition();
@@ -243,20 +249,24 @@ void VRPN_CALLBACK track_target(void *, const vrpn_TRACKERCB tracker)
   Eigen::Quaterniond orientation_estimate_B_W = vicon_odometry_estimator->getEstimatedOrientation();
   Eigen::Vector3d rate_estimate_B = vicon_odometry_estimator->getEstimatedAngularVelocity();
 
-  // Rotating the estimated global frame velocity into the body frame
+  // Rotating the estimated global frame velocity into the body frame.
   Eigen::Vector3d velocity_estimate_B = orientation_estimate_B_W.toRotationMatrix() * velocity_estimate_W;
 
-  // Populate the transform message. Published in main loop
-  tf::vectorEigenToMsg(position_estimate_W, target_state->target.transform.translation);
-  tf::quaternionEigenToMsg(orientation_estimate_B_W, target_state->target.transform.rotation);
+  // Populate the raw measured transform message. Published in main loop.
+  tf::vectorEigenToMsg(position_measured_W, target_state->measured_transform.transform.translation);
+  tf::quaternionEigenToMsg(orientation_measured_B_W, target_state->measured_transform.transform.rotation);
 
-  // Populate the odometry message. Published in main loop
-  tf::pointEigenToMsg(position_estimate_W, target_state->odometry.pose.pose.position);
-  tf::quaternionEigenToMsg(orientation_estimate_B_W, target_state->odometry.pose.pose.orientation);
-  tf::vectorEigenToMsg(velocity_estimate_B, target_state->odometry.twist.twist.linear);
-  tf::vectorEigenToMsg(rate_estimate_B, target_state->odometry.twist.twist.angular);
+  // Populate the estimated transform message. Published in main loop.
+  tf::vectorEigenToMsg(position_estimate_W, target_state->estimated_transform.transform.translation);
+  tf::quaternionEigenToMsg(orientation_estimate_B_W, target_state->estimated_transform.transform.rotation);
 
-  // Indicating to the main loop the data is ready for publishing 
+  // Populate the estimated odometry message. Published in main loop.
+  tf::pointEigenToMsg(position_estimate_W, target_state->estimated_odometry.pose.pose.position);
+  tf::quaternionEigenToMsg(orientation_estimate_B_W, target_state->estimated_odometry.pose.pose.orientation);
+  tf::vectorEigenToMsg(velocity_estimate_B, target_state->estimated_odometry.twist.twist.linear);
+  tf::vectorEigenToMsg(rate_estimate_B, target_state->estimated_odometry.twist.twist.angular);
+
+  // Indicating to the main loop the data is ready for publishing.
   fresh_data = true;
 }
 
@@ -305,6 +315,7 @@ int main(int argc, char* argv[])
     // Publishing newly received data.
     if (fresh_data == true)
     {
+      tool.publish_measured_transform(target_state);
       tool.publish_estimated_transform(target_state);
       tool.publish_estimated_odometry(target_state);
       fresh_data = false;

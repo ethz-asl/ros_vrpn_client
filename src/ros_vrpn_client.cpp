@@ -95,7 +95,7 @@ class Rigid_Body {
     Rigid_Body(ros::NodeHandle& nh, std::string server_ip, int port, const std::string& object_name)
     {
       // Advertising published topics.
-      measured_target_transform_publisher = nh.advertise<geometry_msgs::TransformStamped>("vicon", 10);
+      measured_target_transform_publisher = nh.advertise<geometry_msgs::TransformStamped>("raw_vicon", 10);
       estimated_target_transform_publisher = nh.advertise<geometry_msgs::TransformStamped>("pose", 10);
       estimated_target_odometry_publisher = nh.advertise<nav_msgs::Odometry>("odometry", 10);
       // Connecting to the vprn device and creating an associated tracker.
@@ -253,14 +253,23 @@ void VRPN_CALLBACK track_target(void *, const vrpn_TRACKERCB tracker)
   Eigen::Vector3d velocity_estimate_B = orientation_estimate_B_W.toRotationMatrix() * velocity_estimate_W;
 
   // Populate the raw measured transform message. Published in main loop.
+  target_state->measured_transform.header.stamp = timestamp;
+  target_state->measured_transform.header.frame_id = coordinate_system_string;
+  target_state->measured_transform.child_frame_id = object_name;
   tf::vectorEigenToMsg(position_measured_W, target_state->measured_transform.transform.translation);
   tf::quaternionEigenToMsg(orientation_measured_B_W, target_state->measured_transform.transform.rotation);
 
   // Populate the estimated transform message. Published in main loop.
+  target_state->estimated_transform.header.stamp = timestamp;
+  target_state->estimated_transform.header.frame_id = coordinate_system_string;
+  target_state->estimated_transform.child_frame_id = object_name;
   tf::vectorEigenToMsg(position_estimate_W, target_state->estimated_transform.transform.translation);
   tf::quaternionEigenToMsg(orientation_estimate_B_W, target_state->estimated_transform.transform.rotation);
 
   // Populate the estimated odometry message. Published in main loop.
+  target_state->estimated_odometry.header.stamp = timestamp;
+  target_state->estimated_odometry.header.frame_id = coordinate_system_string;
+  target_state->estimated_odometry.child_frame_id = object_name;
   tf::pointEigenToMsg(position_estimate_W, target_state->estimated_odometry.pose.pose.position);
   tf::quaternionEigenToMsg(orientation_estimate_B_W, target_state->estimated_odometry.pose.pose.orientation);
   tf::vectorEigenToMsg(velocity_estimate_B, target_state->estimated_odometry.twist.twist.linear);

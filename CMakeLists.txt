@@ -22,8 +22,7 @@ cs_add_executable(ros_vrpn_client
 
 add_subdirectory(src/test)
 
-
-target_link_libraries(ros_vrpn_client pthread vicon_estimator)
+target_link_libraries(ros_vrpn_client vicon_estimator ${catkin_LIBRARIES})
 
 cs_install()
 cs_export()

@@ -11,7 +11,7 @@ vrpn_catkin package from: https://github.com/ethz-asl/vrpn_catkin
 Usage
 -----------------
 You have to start a ROS node per tracked object and the ROS node name has to be the name of the trackable onject.
- 
+
      rosrun ros_vrpn_client ros_vrpn_client _object_name:=object_name _vrpn_server_ip:=192.168.1.1
 
 Or in a launch file:
@@ -20,27 +20,23 @@ Or in a launch file:
       <param name="vrpn_server_ip" value="192.168.1.100" />
     </node>
 
-Old Installation HowTo
+Installation HowTo
 ===============
 Installation Ubuntu
 -------------------
 A catkinized version of VRPN can be found here: https://github.com/ethz-asl/vrpn_catkin
 
-For further information about VRPN, please consult their website: 
+For further information about VRPN, please consult their website:
 https://github.com/vrpn/vrpn
-
-Alternative:
-You can use install_vrpn.sh to download, compile, and install VRPN.
 
 Installation OS X
 -----------------
-`brew install vrpn`
-DONE! :)
+Use the catkinized package above.
 
 TF coord frames
 ----------------
 
-1. /optitrak 
+1. /optitrak
         - world frame that we will use.
         - X axis is along the x axis of the clibration pattern.
         - Z axis is vertically up.

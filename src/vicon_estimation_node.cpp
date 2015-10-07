@@ -62,9 +62,14 @@ int main(int argc, char** argv)
   ros::NodeHandle nh;
   ros::NodeHandle nh_private("~");
 
+  // Creating a Vicon Data Listener to direct vicon data to the estimator
+  ViconDataListener vicon_data_listener(nh, nh_private);
+
   //DEBUG
   std::cout << "Test" << std::endl;
 
+  // Spinng forever pumping callbacks
+  ros::spin();
   // Exit tranquilly
   return 0;
 }

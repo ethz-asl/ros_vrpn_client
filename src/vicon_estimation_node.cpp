@@ -24,10 +24,13 @@
 // finally publishes position, velcocity, orientation and angular
 // velocity estimates.
 
+#include <memory>
 #include <iostream>
 
 #include <ros/ros.h>
 #include <geometry_msgs/TransformStamped.h>
+#include <Eigen/Geometry>
+#include <eigen_conversions/eigen_msg.h>
 
 #include "vicon_odometry_estimator.h"
 
@@ -36,20 +39,35 @@ class ViconDataListener {
 
   public:
     // Constructor
-    ViconDataListener(ros::NodeHandle nh, ros::NodeHandle nh_private)
+    ViconDataListener(ros::NodeHandle nh, ros::NodeHandle nh_private,
+                      vicon_estimator::ViconOdometryEstimator* vicon_odometry_estimator) :
+        vicon_odometry_estimator_(vicon_odometry_estimator)
     {
-      raw_transform_sub_ = nh.subscribe("vrpn_client/raw_transform", 10, &ViconDataListener::transformStampedCallback, this);
+      // Subscribing to the raw vicon data
+      raw_transform_sub_ = nh.subscribe("vrpn_client/raw_transform", 10,
+                                        &ViconDataListener::transformStampedCallback, this);
     }
 
     // Raw vicon data callback.
     void transformStampedCallback(const geometry_msgs::TransformStampedConstPtr& msg)
     {
+      // DEBUG
       std::cout << "Transform message received." << std::endl;
+
+      // Extracting the relavent data from the message
+      Eigen::Vector3d position_measured_W;
+      Eigen::Quaterniond orientation_measured_B_W;
+      tf::vectorMsgToEigen(msg->transform.translation, position_measured_W);
+      tf::quaternionMsgToEigen(msg->transform.rotation, orientation_measured_B_W);
+      // Passing the received data to the estimator
+      vicon_odometry_estimator_->updateEstimate(position_measured_W, orientation_measured_B_W);
     }
 
   private:
     // Raw vicon data subscriber.
     ros::Subscriber raw_transform_sub_;
+    // Vicon-based estimator
+    std::unique_ptr<vicon_estimator::ViconOdometryEstimator> vicon_odometry_estimator_;
 };
 
 // Standard C++ entry point
@@ -62,8 +80,13 @@ int main(int argc, char** argv)
   ros::NodeHandle nh;
   ros::NodeHandle nh_private("~");
 
+  // Creating a Vicon-based estimator to do the estimation
+  vicon_estimator::ViconOdometryEstimator vicon_odometry_estimator(nh_private);
+  vicon_odometry_estimator.initializeParameters(nh_private);
+  vicon_odometry_estimator.reset();
+
   // Creating a Vicon Data Listener to direct vicon data to the estimator
-  ViconDataListener vicon_data_listener(nh, nh_private);
+  ViconDataListener vicon_data_listener(nh, nh_private, &vicon_odometry_estimator);
 
   //DEBUG
   std::cout << "Test" << std::endl;

@@ -94,9 +94,9 @@ class Rigid_Body {
     Rigid_Body(ros::NodeHandle& nh, std::string server_ip, int port, const std::string& object_name)
     {
       // Advertising published topics.
-      measured_target_transform_pub_ = nh.advertise<geometry_msgs::TransformStamped>("raw_vicon", 10);
-      estimated_target_transform_pub_ = nh.advertise<geometry_msgs::TransformStamped>("pose", 10);
-      estimated_target_odometry_pub_ = nh.advertise<nav_msgs::Odometry>("odometry", 10);
+      measured_target_transform_pub_ = nh.advertise<geometry_msgs::TransformStamped>("raw_transform", 10);
+      estimated_target_transform_pub_ = nh.advertise<geometry_msgs::TransformStamped>("estimated_transform", 10);
+      estimated_target_odometry_pub_ = nh.advertise<nav_msgs::Odometry>("estimated_odometry", 10);
       // Connecting to the vprn device and creating an associated tracker.
       std::stringstream connection_name;
       connection_name << server_ip << ":" << port;
@@ -243,11 +243,14 @@ void VRPN_CALLBACK track_target(void *, const vrpn_TRACKERCB tracker)
 
   // Updating the estimates with the new measurements.
   vicon_odometry_estimator->updateEstimate(position_measured_W, orientation_measured_B_W);
-  vicon_odometry_estimator->publishResults(timestamp);
   Eigen::Vector3d position_estimate_W = vicon_odometry_estimator->getEstimatedPosition();
   Eigen::Vector3d velocity_estimate_W = vicon_odometry_estimator->getEstimatedVelocity();
   Eigen::Quaterniond orientation_estimate_B_W = vicon_odometry_estimator->getEstimatedOrientation();
   Eigen::Vector3d rate_estimate_B = vicon_odometry_estimator->getEstimatedAngularVelocity();
+  // Publishing the estimator intermediate results
+  // TODO(millanea): This is really only useful for estimator debugging and should be removed
+  //                 once things reach a stable state.
+  vicon_odometry_estimator->publishIntermediateResults(timestamp);
 
   // Rotating the estimated global frame velocity into the body frame.
   Eigen::Vector3d velocity_estimate_B = orientation_estimate_B_W.toRotationMatrix() * velocity_estimate_W;

@@ -7,6 +7,7 @@ find_package(catkin_simple REQUIRED)
 catkin_simple(ALL_DEPS_REQUIRED)
 
 find_package(Eigen REQUIRED)
+find_package(vrpn_client REQUIRED)
 
 include_directories(${Eigen_INCLUDE_DIRS})
 
@@ -15,7 +16,7 @@ cs_add_library(vicon_estimator
   src/wrapper/vicon_odometry_estimator.cpp
 )
 
-cs_add_executable(ros_vrpn_client 
+cs_add_executable(ros_vrpn_client
 	src/ros_vrpn_client.cpp
 )
 

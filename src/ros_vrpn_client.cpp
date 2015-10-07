@@ -61,12 +61,11 @@ void VRPN_CALLBACK track_target(void *, const vrpn_TRACKERCB tracker);
 //void VRPN_CALLBACK track_target_acceleration(void *, const vrpn_TRACKERACCCB ta);
 
 // A class representing the state of the tracked target.
-class TargetState
+struct TargetState
 {
-  public:
-    geometry_msgs::TransformStamped measured_transform;
-    geometry_msgs::TransformStamped estimated_transform;
-    nav_msgs::Odometry estimated_odometry;
+  geometry_msgs::TransformStamped measured_transform;
+  geometry_msgs::TransformStamped estimated_transform;
+  nav_msgs::Odometry estimated_odometry;
 };
 
 // Available coordinate systems.
@@ -77,7 +76,7 @@ enum CoordinateSystem
 } coordinate_system;
 
 // Global target descriptions.
-TargetState *target_state;
+TargetState* target_state;
 std::string object_name;
 std::string coordinate_system_string;
 
@@ -95,9 +94,9 @@ class Rigid_Body {
     Rigid_Body(ros::NodeHandle& nh, std::string server_ip, int port, const std::string& object_name)
     {
       // Advertising published topics.
-      measured_target_transform_publisher = nh.advertise<geometry_msgs::TransformStamped>("raw_vicon", 10);
-      estimated_target_transform_publisher = nh.advertise<geometry_msgs::TransformStamped>("pose", 10);
-      estimated_target_odometry_publisher = nh.advertise<nav_msgs::Odometry>("odometry", 10);
+      measured_target_transform_pub_ = nh.advertise<geometry_msgs::TransformStamped>("raw_vicon", 10);
+      estimated_target_transform_pub_ = nh.advertise<geometry_msgs::TransformStamped>("pose", 10);
+      estimated_target_odometry_pub_ = nh.advertise<nav_msgs::Odometry>("odometry", 10);
       // Connecting to the vprn device and creating an associated tracker.
       std::stringstream connection_name;
       connection_name << server_ip << ":" << port;
@@ -116,20 +115,20 @@ class Rigid_Body {
     // Publishes the raw measured target state to the transform message.
     void publish_measured_transform(TargetState *target_state)
     {
-      measured_target_transform_publisher.publish(target_state->measured_transform);
+      measured_target_transform_pub_.publish(target_state->measured_transform);
     }
 
     // Publishes the estimated target state to the transform message and sends tranform.
     void publish_estimated_transform(TargetState *target_state)
     {
       br.sendTransform(target_state->estimated_transform);
-      estimated_target_transform_publisher.publish(target_state->estimated_transform);
+      estimated_target_transform_pub_.publish(target_state->estimated_transform);
     }
 
     // Publishes the estimated target state to the odometry message.
     void publish_estimated_odometry(TargetState *target_state)
     {
-      estimated_target_odometry_publisher.publish(target_state->estimated_odometry);
+      estimated_target_odometry_pub_.publish(target_state->estimated_odometry);
     }
 
     // Passes contol to the vrpn client.
@@ -141,13 +140,13 @@ class Rigid_Body {
 
   private:
     // Publishers
-    ros::Publisher measured_target_transform_publisher;
-    ros::Publisher estimated_target_transform_publisher;
-    ros::Publisher estimated_target_odometry_publisher;
+    ros::Publisher measured_target_transform_pub_;
+    ros::Publisher estimated_target_transform_pub_;
+    ros::Publisher estimated_target_odometry_pub_;
     tf::TransformBroadcaster br;
     // Vprn object pointers
-    vrpn_Connection *connection;
-    vrpn_Tracker_Remote *tracker;
+    vrpn_Connection* connection;
+    vrpn_Tracker_Remote* tracker;
 };
 
 
@@ -171,7 +170,7 @@ void inline correctForCoordinateSystem(const Eigen::Quaterniond& orientation_in,
                                        Eigen::Vector3d* position_measured_W)
 {
   // Rotation to correct between optitrack and vicon
-  const Eigen::Quaterniond kqOptitrackFix(0.70710678, 0.70710678, 0.0, 0.0);
+  const Eigen::Quaterniond kqOptitrackFix(Eigen::AngleAxisd(0.5*M_PI, Eigen::Vector3d::UnitX()));
   // Correcting measurements based on coordinate system
   switch (coordinate_system)
   {
@@ -199,7 +198,7 @@ void inline correctForCoordinateSystem(const Eigen::Quaterniond& orientation_in,
 }
 
 // Compares two instances of tracker data for equality
-bool inline tracker_equal(const vrpn_TRACKERCB& vprn_data_1, const vrpn_TRACKERCB& vprn_data_2)
+bool inline tracker_is_equal(const vrpn_TRACKERCB& vprn_data_1, const vrpn_TRACKERCB& vprn_data_2)
 {
   return( vprn_data_1.quat[0] == vprn_data_2.quat[0]
           and vprn_data_1.quat[1] == vprn_data_2.quat[1]
@@ -223,15 +222,16 @@ void VRPN_CALLBACK track_target(void *, const vrpn_TRACKERCB tracker)
                              &orientation_measured_B_W, &position_measured_W);
 
   // Verifying that each callback indeed gives fresh data.
-  if(tracker_equal(prev_tracker, tracker)) {
+  if (tracker_is_equal(prev_tracker, tracker)) {
     ROS_WARN("Repeated Values");
   }
   prev_tracker = tracker;
 
   // Somehow the vrpn msgs are in a different time zone.
   const int kMicroSecToNanoSec = 1000;
+  const double kHoursToSec = 3600;
   ros::Time timestamp_local = ros::Time::now();
-  int timediff_sec = std::round(double(timestamp_local.sec - tracker.msg_time.tv_sec) / 3600) * 3600;
+  int timediff_sec = std::round(double(timestamp_local.sec - tracker.msg_time.tv_sec) / kHoursToSec) * kHoursToSec;
 
   int timestamp_nsec = tracker.msg_time.tv_usec * kMicroSecToNanoSec;
   ros::Time timestamp = ros::Time(tracker.msg_time.tv_sec + timediff_sec, timestamp_nsec);
@@ -303,8 +303,8 @@ int main(int argc, char* argv[])
   std::cout << "object_name:" << object_name << std::endl;
 
   // Checking for valid coordinate specification
-  CHECK((coordinate_system_string == std::string("vicon"))
-        || (coordinate_system_string == std::string("optitrack")))
+  CHECK(coordinate_system_string.compare("vicon")
+        or coordinate_system_string.compare("optitrack"))
         << "ROS param vrpn_coordinate_system should be either 'vicon' or 'optitrack'!";
 
   // Creating the estimator

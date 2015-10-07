@@ -27,8 +27,30 @@
 #include <iostream>
 
 #include <ros/ros.h>
+#include <geometry_msgs/TransformStamped.h>
 
 #include "vicon_odometry_estimator.h"
+
+// Class for collecting data and passing it to the underlying estimator
+class ViconDataListener {
+
+  public:
+    // Constructor
+    ViconDataListener(ros::NodeHandle nh, ros::NodeHandle nh_private)
+    {
+      raw_transform_sub_ = nh.subscribe("vrpn_client/raw_transform", 10, &ViconDataListener::transformStampedCallback, this);
+    }
+
+    // Raw vicon data callback.
+    void transformStampedCallback(const geometry_msgs::TransformStampedConstPtr& msg)
+    {
+      std::cout << "Transform message received." << std::endl;
+    }
+
+  private:
+    // Raw vicon data subscriber.
+    ros::Subscriber raw_transform_sub_;
+};
 
 // Standard C++ entry point
 int main(int argc, char** argv)

@@ -7,7 +7,7 @@ find_package(catkin_simple REQUIRED)
 catkin_simple(ALL_DEPS_REQUIRED)
 
 find_package(Eigen REQUIRED)
-find_package(vrpn_client REQUIRED)
+find_package(vrpn_catkin REQUIRED)
 
 include_directories(${Eigen_INCLUDE_DIRS})
 

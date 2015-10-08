@@ -29,6 +29,7 @@
 
 #include <ros/ros.h>
 #include <geometry_msgs/TransformStamped.h>
+#include <nav_msgs/Odometry.h>
 #include <Eigen/Geometry>
 #include <eigen_conversions/eigen_msg.h>
 
@@ -46,14 +47,16 @@ class ViconDataListener {
       // Subscribing to the raw vicon data
       raw_transform_sub_ = nh.subscribe("vrpn_client/raw_transform", 10,
                                         &ViconDataListener::transformStampedCallback, this);
+      // Advertising the estimated target state components
+      estimated_transform_pub_ = nh_private.advertise<geometry_msgs::TransformStamped>(
+          "estimated_transform", 10);
+      estimated_odometry_pub_ = nh_private.advertise<nav_msgs::Odometry>(
+          "estimated_odometry", 10);
     }
 
     // Raw vicon data callback.
     void transformStampedCallback(const geometry_msgs::TransformStampedConstPtr& msg)
     {
-      // DEBUG
-      std::cout << "Transform message received." << std::endl;
-
       // Extracting the relavent data from the message
       Eigen::Vector3d position_measured_W;
       Eigen::Quaterniond orientation_measured_B_W;
@@ -61,11 +64,36 @@ class ViconDataListener {
       tf::quaternionMsgToEigen(msg->transform.rotation, orientation_measured_B_W);
       // Passing the received data to the estimator
       vicon_odometry_estimator_->updateEstimate(position_measured_W, orientation_measured_B_W);
+      // Retreiving the estimates
+      Eigen::Vector3d position_estimate_W = vicon_odometry_estimator_->getEstimatedPosition();
+      Eigen::Vector3d velocity_estimate_W = vicon_odometry_estimator_->getEstimatedVelocity();
+      Eigen::Quaterniond orientation_estimate_B_W = vicon_odometry_estimator_->getEstimatedOrientation();
+      Eigen::Vector3d rate_estimate_B = vicon_odometry_estimator_->getEstimatedAngularVelocity();
+      // Rotating the estimated global frame velocity into the body frame.
+      Eigen::Vector3d velocity_estimate_B = orientation_estimate_B_W.toRotationMatrix() * velocity_estimate_W;
+      // Creating estimated transform message
+      geometry_msgs::TransformStamped estimated_transform;
+      estimated_transform.header = msg->header;
+      tf::vectorEigenToMsg(position_estimate_W, estimated_transform.transform.translation);
+      tf::quaternionEigenToMsg(orientation_estimate_B_W, estimated_transform.transform.rotation);
+      // Creating estimated odometry message
+      nav_msgs::Odometry estimated_odometry;
+      estimated_odometry.header = msg->header;
+      tf::pointEigenToMsg(position_estimate_W, estimated_odometry.pose.pose.position);
+      tf::quaternionEigenToMsg(orientation_estimate_B_W, estimated_odometry.pose.pose.orientation);
+      tf::vectorEigenToMsg(velocity_estimate_B, estimated_odometry.twist.twist.linear);
+      tf::vectorEigenToMsg(rate_estimate_B, estimated_odometry.twist.twist.angular);
+      // Publishing the estimates
+      estimated_transform_pub_.publish(estimated_transform);
+      estimated_odometry_pub_.publish(estimated_odometry);
     }
 
   private:
     // Raw vicon data subscriber.
     ros::Subscriber raw_transform_sub_;
+    // Estimate publishers
+    ros::Publisher estimated_transform_pub_;
+    ros::Publisher estimated_odometry_pub_;
     // Vicon-based estimator
     std::unique_ptr<vicon_estimator::ViconOdometryEstimator> vicon_odometry_estimator_;
 };
@@ -74,7 +102,7 @@ class ViconDataListener {
 int main(int argc, char** argv)
 {
   // Announce this program to the ROS master
-  ros::init(argc, argv, "vicon_to_csv_node");
+  ros::init(argc, argv, "vicon_estimator");
 
   // Creating the node handles
   ros::NodeHandle nh;
@@ -87,9 +115,6 @@ int main(int argc, char** argv)
 
   // Creating a Vicon Data Listener to direct vicon data to the estimator
   ViconDataListener vicon_data_listener(nh, nh_private, &vicon_odometry_estimator);
-
-  //DEBUG
-  std::cout << "Test" << std::endl;
 
   // Spinng forever pumping callbacks
   ros::spin();

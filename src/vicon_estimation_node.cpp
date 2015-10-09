@@ -52,6 +52,8 @@ class ViconDataListener {
           "estimated_transform", 10);
       estimated_odometry_pub_ = nh_private.advertise<nav_msgs::Odometry>(
           "estimated_odometry", 10);
+      // Getting the object name
+      nh_private.param<std::string>("object_name", object_name_, "auk");
     }
 
     // Raw vicon data callback.
@@ -79,6 +81,7 @@ class ViconDataListener {
       // Creating estimated odometry message
       nav_msgs::Odometry estimated_odometry;
       estimated_odometry.header = msg->header;
+      estimated_odometry.child_frame_id = object_name_;
       tf::pointEigenToMsg(position_estimate_W, estimated_odometry.pose.pose.position);
       tf::quaternionEigenToMsg(orientation_estimate_B_W, estimated_odometry.pose.pose.orientation);
       tf::vectorEigenToMsg(velocity_estimate_B, estimated_odometry.twist.twist.linear);
@@ -94,6 +97,8 @@ class ViconDataListener {
     // Estimate publishers
     ros::Publisher estimated_transform_pub_;
     ros::Publisher estimated_odometry_pub_;
+    // Name of the tracked object
+    std::string object_name_;
     // Vicon-based estimator
     std::unique_ptr<vicon_estimator::ViconOdometryEstimator> vicon_odometry_estimator_;
 };

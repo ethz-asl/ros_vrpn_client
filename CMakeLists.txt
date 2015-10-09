@@ -7,7 +7,6 @@ find_package(catkin_simple REQUIRED)
 catkin_simple(ALL_DEPS_REQUIRED)
 
 find_package(Eigen REQUIRED)
-find_package(vrpn_catkin REQUIRED)
 
 include_directories(${Eigen_INCLUDE_DIRS})
 
@@ -20,10 +19,14 @@ cs_add_executable(ros_vrpn_client
 	src/ros_vrpn_client.cpp
 )
 
+cs_add_executable(vicon_estimation_node
+  src/vicon_estimation_node.cpp
+)
+
 add_subdirectory(src/test)
 
-
-target_link_libraries(ros_vrpn_client pthread vicon_estimator)
+target_link_libraries(ros_vrpn_client vicon_estimator ${catkin_LIBRARIES})
+target_link_libraries(vicon_estimation_node vicon_estimator ${catkin_LIBRARIES})
 
 cs_install()
 cs_export()

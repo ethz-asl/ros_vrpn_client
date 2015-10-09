@@ -27,7 +27,7 @@ ViconOdometryEstimator::ViconOdometryEstimator(ros::NodeHandle& nh)
     : vicon_estimator_()
 {
   // Creating publisher for intermediate estimator values
-  publisher_ = nh.advertise<ros_vrpn_client::viconEstimator>("viconEstimator", 100);
+  publisher_ = nh.advertise<ros_vrpn_client::viconEstimator>("vicon_intermediate_results", 100);
 }
 
 void ViconOdometryEstimator::initializeParameters(ros::NodeHandle& nh)
@@ -68,7 +68,7 @@ void ViconOdometryEstimator::reset()
   vicon_estimator_.reset();
 }
 
-void ViconOdometryEstimator::publishResults(ros::Time timestamp)
+void ViconOdometryEstimator::publishIntermediateResults(ros::Time timestamp)
 {
 
   //TODO(millanea): Publishing of the intermediate results was useful when

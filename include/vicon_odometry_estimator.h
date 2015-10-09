@@ -46,7 +46,7 @@ class ViconOdometryEstimator
   // Reset the estimator
   void reset();
   // Publishing the intermediate results
-  void publishResults(ros::Time timestamp);
+  void publishIntermediateResults(ros::Time timestamp);
 
   // Calls the underlying estimator, updating the estimate with the latest measurement
   void updateEstimate(const Eigen::Vector3d& position_measured_W, const Eigen::Quaterniond& orientation_measured_B_W);

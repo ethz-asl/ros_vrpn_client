@@ -10,7 +10,7 @@ vrpn_catkin package from: https://github.com/ethz-asl/vrpn_catkin
 
 Usage
 -----------------
-You have to start a ROS node per tracked object and the ROS node name has to be the name of the trackable onject.
+You have to start a ROS node per tracked object and the ROS node name has to be the name of the trackable object.
 
      rosrun ros_vrpn_client ros_vrpn_client _object_name:=object_name _vrpn_server_ip:=192.168.1.1
 
@@ -38,7 +38,7 @@ TF coord frames
 
 1. /optitrak
         - world frame that we will use.
-        - X axis is along the x axis of the clibration pattern.
+        - X axis is along the x axis of the calibration pattern.
         - Z axis is vertically up.
 
 2. Every tracked object has a coord frame whose TF name is the name of

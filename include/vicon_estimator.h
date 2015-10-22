@@ -276,14 +276,6 @@ class RotationalEstimator
   // Returns the magnitude of the rotation represented by a quaternion
   double quaternionRotationMagnitude(const Eigen::Quaterniond& rotation);
 
-  // Corrects for the redundancy in measured quaternions
-  void correctRedundantMeasurement(const Eigen::Quaterniond& orientation_measured,
-                                   const Eigen::Matrix<double, 7, 1>& x_priori,
-                                   Eigen::Quaterniond* corrected_orientation_measured);
-
-  void correctPosterioriState(const Eigen::Matrix<double, 7, 1>& x_m,
-                              Eigen::Matrix<double, 7, 1>* x_m_corrected);
-
 };
 
 class ViconEstimator

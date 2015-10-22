@@ -210,12 +210,6 @@ void RotationalEstimator::updateEstimate(const Eigen::Quaterniond& orientation_m
   P_old = covariance_;
   updateEstimatePropagateErrorCovariance(P_old, x_old, &P_p);
 
-  // Correcting the measured orientation for quaternion redundancy
-  Eigen::Quaterniond orientation_measured_corrected_B_W;
-  correctRedundantMeasurement(orientation_measured_B_W, x_p,
-                              &orientation_measured_corrected_B_W);
-  estimator_results_.orientation_measured_corrected_ = orientation_measured_corrected_B_W;
-
   // Posteriori variables
   Eigen::Matrix<double, 7, 1> x_m;
   Eigen::Matrix<double, 6, 1> dx_m;
@@ -224,7 +218,7 @@ void RotationalEstimator::updateEstimate(const Eigen::Quaterniond& orientation_m
   // If no outlier detected do measurement update
   if (measurement_update_flag) {
     // Measurement Update
-    updateEstimateUpdateErrorEstimate(orientation_measured_corrected_B_W, x_p, dx_p, P_p, &dx_m, &P_m);
+    updateEstimateUpdateErrorEstimate(orientation_measured_B_W, x_p, dx_p, P_p, &dx_m, &P_m);
     // Global state correction (combining priori global state estimate with posteriori error state estimate)
     updateEstimateRecombineErrorGlobal(x_p, &x_m, &dx_m);
   }
@@ -236,13 +230,9 @@ void RotationalEstimator::updateEstimate(const Eigen::Quaterniond& orientation_m
     Eigen::Matrix<double, 6, 6> P_m = P_p;
   }
 
-  // Correcting the state
-  Eigen::Matrix<double, 7, 1> x_m_corrected;
-  correctPosterioriState(x_m, &x_m_corrected);
-
   // Extracting estimated quantities from the posteriori state
-  orientation_estimate_B_W_ = Eigen::Quaterniond(x_m_corrected.block<4, 1>(0, 0));
-  rate_estimate_B_ = x_m_corrected.block<3, 1>(4, 0);
+  orientation_estimate_B_W_ = Eigen::Quaterniond(x_m.block<4, 1>(0, 0));
+  rate_estimate_B_ = x_m.block<3, 1>(4, 0);
   covariance_ = P_m;
 
   // Writing the new estimate to the intermediate results structure
@@ -532,69 +522,6 @@ double RotationalEstimator::quaternionRotationMagnitude(const Eigen::Quaterniond
   } else {
     return negative_rotation_return;
   }
-}
-
-void RotationalEstimator::correctRedundantMeasurement(const Eigen::Quaterniond& orientation_measured,
-                                                      const Eigen::Matrix<double, 7, 1>& x_priori,
-                                                      Eigen::Quaterniond* corrected_orientation_measured)
-{
-  // Correcting such that the measurement is always positive
-  //double correction_factor = orientation_measured.coeffs().w() / std::abs(orientation_measured.coeffs().w());
-  //*corrected_orientation_measured = Eigen::Quaterniond(correction_factor * orientation_measured.coeffs());
-
-  // Making no correction
-  *corrected_orientation_measured = orientation_measured;
-
-/*  // Extracting priori orientation estimate
-  Eigen::Quaterniond orientation_estimate_priori = Eigen::Quaterniond(x_priori.block<4, 1>(0, 0));
-
-  Eigen::Quaterniond error_orientation = orientation_measured * orientation_estimate_priori.inverse();
-  if (error_orientation.w() >= 0) {
-    estimator_results_.measurement_flip_flag_ = false;
-    *corrected_orientation_measured = orientation_measured;
-  } else {
-    estimator_results_.measurement_flip_flag_ = true;
-    *corrected_orientation_measured = orientation_measured;
-    //*corrected_orientation_measured = Eigen::Quaterniond(-1.0 * orientation_measured.coeffs());
-  }*/
-
-
-
-  // DEBUG
-/*  std::cout << "orientation_measured" << std::endl;
-  std::cout << orientation_measured.coeffs() << std::endl;
-
-  std::cout << "orientation_measured.coeffs().w()" << std::endl;
-  std::cout << orientation_measured.coeffs().w() << std::endl;
-
-  std::cout << "std::abs(orientation_measured.coeffs().w())" << std::endl;
-  std::cout << std::abs(orientation_measured.coeffs().w()) << std::endl;
-
-  std::cout << "correction_factor" << std::endl;
-  std::cout << correction_factor << std::endl;
-
-  std::cout << "corrected_orientation_measured" << std::endl;
-  std::cout << corrected_orientation_measured->coeffs() << std::endl;*/
-}
-
-void RotationalEstimator::correctPosterioriState(const Eigen::Matrix<double, 7, 1>& state,
-                                                 Eigen::Matrix<double, 7, 1>* state_corrected)
-{
-
-  // Doing nothing
-  *state_corrected = state;
-
-/*  // Extracting priori orientation estimate
-  Eigen::Quaterniond orientation = Eigen::Quaterniond(state.block<4, 1>(0, 0));
-  Eigen::Matrix<double, 3, 1> rate = state.block<3, 1>(4, 0);
-
-  // Correcting the state to positive real part
-  double correction_factor = orientation.coeffs().w() / std::abs(orientation.coeffs().w());
-  Eigen::Quaterniond orientation_corrected = Eigen::Quaterniond(correction_factor * orientation.coeffs());
-
-
-  // Writing the correction to the output
-  *state_corrected << orientation_corrected.coeffs(), rate;*/
 }
 
 }

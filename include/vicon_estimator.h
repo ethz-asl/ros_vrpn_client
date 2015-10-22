@@ -184,7 +184,6 @@ class RotationalEstimatorResults
 
   // Intermediate Estimator results
   Eigen::Quaterniond orientation_measured_;
-  Eigen::Quaterniond orientation_measured_corrected_;
   Eigen::Quaterniond orientation_old_;
   Eigen::Vector3d rate_old_;
   Eigen::Quaterniond orientation_estimate_;

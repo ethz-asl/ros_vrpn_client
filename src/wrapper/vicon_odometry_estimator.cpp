@@ -90,28 +90,23 @@ void ViconOdometryEstimator::publishIntermediateResults(ros::Time timestamp)
 
   // Writing the measurement to the message object
   tf::vectorEigenToMsg(translational_estimator_results.position_measured_, msg.pos_measured);
-
   // Writing the old estimates to the message object
   tf::vectorEigenToMsg(translational_estimator_results.position_old_, msg.pos_old);
   tf::vectorEigenToMsg(translational_estimator_results.velocity_old_, msg.vel_old);
-
   // Posteriori results
   tf::vectorEigenToMsg(translational_estimator_results.position_estimate_, msg.pos_est);
   tf::vectorEigenToMsg(translational_estimator_results.velocity_estimate_, msg.vel_est);
 
   // Writing the measurement to the message object
   tf::quaternionEigenToMsg(rotational_estimator_results.orientation_measured_, msg.quat_measured);
-  tf::quaternionEigenToMsg(rotational_estimator_results.orientation_measured_corrected_, msg.quat_measured_corrected); 
-
   // Writing the old estimates to the message object
   tf::quaternionEigenToMsg(rotational_estimator_results.orientation_old_, msg.quat_old); 
   tf::vectorEigenToMsg(rotational_estimator_results.rate_old_, msg.omega_old);
-
   // Posteriori results
   tf::quaternionEigenToMsg(rotational_estimator_results.orientation_estimate_, msg.quat_est);
   tf::vectorEigenToMsg(rotational_estimator_results.rate_estimate_, msg.omega_est);
 
-  // Data to do with the measurement error
+  // Data to do with the orientation measurement outlier detection
   msg.outlier_flag.data = rotational_estimator_results.measurement_outlier_flag_;
   msg.measurement_flip_flag.data = rotational_estimator_results.measurement_flip_flag_;
   tf::quaternionEigenToMsg(rotational_estimator_results.q_Z_Z1_, msg.q_Z_Z1);

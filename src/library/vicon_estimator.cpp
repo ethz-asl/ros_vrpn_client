@@ -330,63 +330,29 @@ void RotationalEstimator::updateEstimateUpdateErrorEstimate(
            -orientation_estimate_priori.vec().transpose();
   H << Hdq, Eigen::Matrix<double, 4, 3>::Zero();
 
-  // Predicting the measurement
-  Eigen::Quaterniond orientation_predicted_plus = Eigen::Quaterniond(
-      Hdq * dorientation_estimate_priori + orientation_estimate_priori.coeffs());
-
-  Eigen::Quaterniond orientation_predicted_minus = Eigen::Quaterniond(
-      Hdq * dorientation_estimate_priori - orientation_estimate_priori.coeffs());
-
-  // Calculating the potential residuals and their norms
-  Eigen::Vector4d measurement_residual_plus(orientation_measured.coeffs() - orientation_predicted_plus.coeffs());
-  Eigen::Vector4d measurement_residual_minus(orientation_measured.coeffs() - orientation_predicted_minus.coeffs());
-  double measurement_residual_plus_norm = measurement_residual_plus.norm();
-  double measurement_residual_minus_norm = measurement_residual_minus.norm();
-
-  // Defining the measurement residual
-  Eigen::Vector4d measurement_residual;
- // measurement_residual = measurement_residual_plus;
-
-  // ATTEMPT TWO
-  // Generate the error quaternion
+  // Calculating the measured error quaternion
   Eigen::Quaterniond error_orientation = orientation_measured * orientation_estimate_priori.inverse();
+
+  // Calculating the predicted measurement dependant on the sign of the measured error quaternion
+  Eigen::Quaterniond orientation_predicted;
   if (error_orientation.w() >= 0) {
+    // Assigning the flag indicating that this measurment is not flipped
     estimator_results_.measurement_flip_flag_ = false;
-    measurement_residual = measurement_residual_plus;
+    // Calculating the predicted measurement
+    orientation_predicted = Eigen::Quaterniond(
+      Hdq * dorientation_estimate_priori + orientation_estimate_priori.coeffs());
   } else {
+    // Assigning the flag indicating that this measurment is flipped
     estimator_results_.measurement_flip_flag_ = true;
-    measurement_residual = measurement_residual_minus;
+    // Calculating the predicted measurement
+    orientation_predicted = Eigen::Quaterniond(
+      Hdq * dorientation_estimate_priori + orientation_estimate_priori.coeffs());
   }
 
-  // ATTEMPT THREE
-  // Generate the error quaternion
-/*  double sign_measurement = orientation_measured.w() / std::abs(orientation_measured.w()) ;
-  double sign_estimate = orientation_estimate_priori.w() / std::abs(orientation_estimate_priori.w()) ;
-  //std::cout << "sign_measurement" << sign_measurement << std::endl;
-  //std::cout << "sign_estimate" << sign_estimate << std::endl;
-  if (std::abs(sign_measurement + sign_estimate) > 0.5) {
-    estimator_results_.measurement_flip_flag_ = false;
-  } else {
-    estimator_results_.measurement_flip_flag_ = true;
-    std::cout << "Flip detected." << std::endl;
-  }*/
+  // Calculating the measurement residual
+  Eigen::Vector4d measurement_residual;
+  measurement_residual = orientation_measured.coeffs() - orientation_predicted.coeffs();
 
-/*  // Calculating the correct measurement residual between the two options
-  if (measurement_residual_plus_norm < measurement_residual_minus_norm) {
-    estimator_results_.measurement_flip_flag_ = false;
-  } else {
-    estimator_results_.measurement_flip_flag_ = true;
-  }
-*/
-
-/*  // DEBUG
-  if (measurement_residual_minus_norm < measurement_residual_plus_norm) {
-    std::cout << "measurement_residual_plus_norm" << std::endl;
-    std::cout << measurement_residual_plus_norm << std::endl;
-    std::cout << "measurement_residual_minus_norm" << std::endl;
-    std::cout << measurement_residual_minus_norm << std::endl;
-  }
-*/
   // Computing the Kalman gain
   Eigen::Matrix<double, 4, 4> S = H * covariance_priori * H.transpose() + measurement_covariance_;
   Eigen::Matrix<double, 6, 4> K;
@@ -408,13 +374,9 @@ void RotationalEstimator::updateEstimateRecombineErrorGlobal(
   Eigen::Matrix<double, 3, 1> rate_estimate_priori = x_priori.block<3, 1>(4, 0);
   Eigen::Matrix<double, 3, 1> dorientation_estimate_measurement = dx_measurement->block<3, 1>(0, 0);
   Eigen::Matrix<double, 3, 1> drate_estimate_measurement = dx_measurement->block<3, 1>(3, 0);
-  // Completing the error quaternion
-  //Eigen::Quaterniond dorientation_estimate_measurement_quaternion = Eigen::Quaterniond(
-  //    1.0, dorientation_estimate_measurement.x(), dorientation_estimate_measurement.y(),
-  //    dorientation_estimate_measurement.z());
-
 
   // Completing the error quaternion
+  // The sign real part of the full quaternion was calculated in the error quaternion measurement update step 
   Eigen::Quaterniond dorientation_estimate_measurement_quaternion;
   if (estimator_results_.measurement_flip_flag_ == false) {
     dorientation_estimate_measurement_quaternion = Eigen::Quaterniond(
@@ -501,7 +463,6 @@ bool RotationalEstimator::detectMeasurementOutlier(const Eigen::Quaterniond& ori
   // If rotation too great indicate that measurement is corrupted
   if (measurement_outlier_flag) {
     ++outlier_counter_;
-    std::cout << "Outlier detected" << std::endl;
     return true;
   } else {
     // If measurement valid. Overwriting the old measurement.

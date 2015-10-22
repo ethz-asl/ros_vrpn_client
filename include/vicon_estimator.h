@@ -22,10 +22,6 @@
 #ifndef VICON_ESTIMATOR_H
 #define VICON_ESTIMATOR_H
 
-#include <iostream>
-#include <stdio.h>
-#include <math.h>
-
 #include <Eigen/Geometry>
 
 namespace vicon_estimator {
@@ -67,7 +63,7 @@ class TranslationalEstimatorResults
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
   // Constructor
   TranslationalEstimatorResults()
-      : position_measured(Eigen::Vector3d::Zero()),
+      : position_measured_(Eigen::Vector3d::Zero()),
         position_old_(Eigen::Vector3d::Zero()),
         velocity_old_(Eigen::Vector3d::Zero()),
         position_estimate_(Eigen::Vector3d::Zero()),
@@ -76,7 +72,7 @@ class TranslationalEstimatorResults
   }
 
   // Intermediate Estimator results
-  Eigen::Vector3d position_measured;
+  Eigen::Vector3d position_measured_;
   Eigen::Vector3d position_old_;
   Eigen::Vector3d velocity_old_;
   Eigen::Vector3d position_estimate_;
@@ -188,10 +184,17 @@ class RotationalEstimatorResults
 
   // Intermediate Estimator results
   Eigen::Quaterniond orientation_measured_;
+  Eigen::Quaterniond orientation_measured_corrected_;
   Eigen::Quaterniond orientation_old_;
   Eigen::Vector3d rate_old_;
   Eigen::Quaterniond orientation_estimate_;
   Eigen::Vector3d rate_estimate_;
+  bool measurement_outlier_flag_;
+  bool measurement_flip_flag_;
+  Eigen::Quaterniond q_Z_Z1_;
+  double q_Z_Z1_magnitude_;
+  Eigen::Quaterniond q_Z_B_;
+  double q_Z_B_magnitude_;
 
 };
 
@@ -272,6 +275,14 @@ class RotationalEstimator
   bool detectMeasurementOutlier(const Eigen::Quaterniond& orientation_measured);
   // Returns the magnitude of the rotation represented by a quaternion
   double quaternionRotationMagnitude(const Eigen::Quaterniond& rotation);
+
+  // Corrects for the redundancy in measured quaternions
+  void correctRedundantMeasurement(const Eigen::Quaterniond& orientation_measured,
+                                   const Eigen::Matrix<double, 7, 1>& x_priori,
+                                   Eigen::Quaterniond* corrected_orientation_measured);
+
+  void correctPosterioriState(const Eigen::Matrix<double, 7, 1>& x_m,
+                              Eigen::Matrix<double, 7, 1>* x_m_corrected);
 
 };
 

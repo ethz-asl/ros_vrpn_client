@@ -89,6 +89,8 @@ class ViconDataListener {
       // Publishing the estimates
       estimated_transform_pub_.publish(estimated_transform);
       estimated_odometry_pub_.publish(estimated_odometry);
+      // Publishing the estimator intermediate results
+      vicon_odometry_estimator_->publishIntermediateResults(msg->header.stamp);
     }
 
   private:

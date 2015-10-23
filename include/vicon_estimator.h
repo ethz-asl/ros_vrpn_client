@@ -39,6 +39,7 @@ class TranslationalEstimatorParameters
 {
 
  public:
+  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
   // Constructor
   TranslationalEstimatorParameters()
       : dt_(kDefaultDt),
@@ -134,6 +135,7 @@ class RotationalEstimatorParameters
 {
 
  public:
+  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
   // Constructor
   RotationalEstimatorParameters()
       : dt_(kDefaultDt),
@@ -177,7 +179,13 @@ class RotationalEstimatorResults
         orientation_old_(Eigen::Quaterniond::Identity()),
         rate_old_(Eigen::Vector3d::Zero()),
         orientation_estimate_(Eigen::Quaterniond::Identity()),
-        rate_estimate_(Eigen::Vector3d::Zero())
+        rate_estimate_(Eigen::Vector3d::Zero()),
+        measurement_outlier_flag_(false),
+        measurement_flip_flag_(false),
+        q_Z_Z1_(Eigen::Quaterniond::Identity()),
+        q_Z_Z1_magnitude_(0.0),
+        q_Z_B_(Eigen::Quaterniond::Identity()),
+        q_Z_B_magnitude_(0.0)
   {
   }
   ;

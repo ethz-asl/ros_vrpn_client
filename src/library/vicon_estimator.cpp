@@ -460,6 +460,9 @@ bool RotationalEstimator::detectMeasurementOutlier(const Eigen::Quaterniond& ori
     measurement_outlier_flag = false;
   }
 
+  // Saving the flag to the intermediate results structure
+  estimator_results_.measurement_outlier_flag_ = measurement_outlier_flag;
+
   // If rotation too great indicate that measurement is corrupted
   if (measurement_outlier_flag) {
     ++outlier_counter_;

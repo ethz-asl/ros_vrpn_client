@@ -183,9 +183,7 @@ class RotationalEstimatorResults
         measurement_outlier_flag_(false),
         measurement_flip_flag_(false),
         q_Z_Z1_(Eigen::Quaterniond::Identity()),
-        q_Z_Z1_magnitude_(0.0),
-        q_Z_B_(Eigen::Quaterniond::Identity()),
-        q_Z_B_magnitude_(0.0)
+        q_Z_B_(Eigen::Quaterniond::Identity())
   {
   }
   ;
@@ -199,9 +197,7 @@ class RotationalEstimatorResults
   bool measurement_outlier_flag_;
   bool measurement_flip_flag_;
   Eigen::Quaterniond q_Z_Z1_;
-  double q_Z_Z1_magnitude_;
   Eigen::Quaterniond q_Z_B_;
-  double q_Z_B_magnitude_;
 
 };
 

@@ -446,9 +446,7 @@ bool RotationalEstimator::detectMeasurementOutlier(const Eigen::Quaterniond& ori
 
   // Writing the error quaternions and their magnitude to the intermediate results structure
   estimator_results_.q_Z_Z1_ = q_Z_Z1_;
-  estimator_results_.q_Z_Z1_magnitude_ = q_Z_Z1_magnitude_;
   estimator_results_.q_Z_B_ = q_Z_B_;
-  estimator_results_.q_Z_B_magnitude_ = q_Z_B_magnitude_;
 
   // Detecting if the measurement is an outlier
   bool measurement_outlier_flag = q_Z_Z1_magnitude_ 

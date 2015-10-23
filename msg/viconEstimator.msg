@@ -16,7 +16,4 @@ std_msgs/Bool             outlier_flag           # flag indicating if the measur
 std_msgs/Bool             measurement_flip_flag  # flag indicating if the measurement from vicon has undergone a redundant flipping.
 
 geometry_msgs/Quaternion  q_Z_Z1                 # the quaternion representing the rotation between subsequent measurements
-std_msgs/Float64          q_Z_Z1_magnitude       # the magnitude of the quaternion representing the rotation between subsequent measurements
-
 geometry_msgs/Quaternion  q_Z_B                  # the quaternion representing the rotation between measurement and body
-std_msgs/Float64          q_Z_B_magnitude        # the magnitude of the quaternion representing the rotation between measurement and body

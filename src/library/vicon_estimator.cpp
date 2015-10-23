@@ -175,6 +175,25 @@ void RotationalEstimator::setParameters(const RotationalEstimatorParameters& est
   estimator_parameters_ = estimator_parameters;
 }
 
+Eigen::Quaterniond RotationalEstimator::getEstimatedOrientation() const
+{
+  Eigen::Quaterniond orientation_for_return;
+  // Swapping to minimal (but redundant) representation if requested
+  if (estimator_parameters_.output_minimal_quaternions_) {
+    double correction_factor = orientation_estimate_B_W_.w() / std::abs(orientation_estimate_B_W_.w());
+    orientation_for_return = Eigen::Quaterniond(correction_factor * orientation_estimate_B_W_.coeffs());
+  } else {
+    orientation_for_return = orientation_estimate_B_W_;
+  }
+  return orientation_for_return;
+}
+
+Eigen::Vector3d RotationalEstimator::getEstimatedRate() const
+{
+  return rate_estimate_B_;
+}
+
+
 void RotationalEstimator::updateEstimate(const Eigen::Quaterniond& orientation_measured_B_W)
 {
   // Writing the raw measurement to the intermediate results structure

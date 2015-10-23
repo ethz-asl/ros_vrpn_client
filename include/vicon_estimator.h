@@ -130,6 +130,7 @@ static const Eigen::Vector3d kDefaultInitialDorientationEstimate = Eigen::Vector
 static const Eigen::Vector3d kDefaultInitialDrateEstimate = Eigen::Vector3d::Zero();
 static const double kDefaultOutlierThresholdDegrees = 30.0;
 static const int kDefaultMaximumOutlierCount = 10;
+static const bool kOutputMinimalQuaternions = false;
 
 class RotationalEstimatorParameters
 {
@@ -149,7 +150,8 @@ class RotationalEstimatorParameters
         initial_dorientation_estimate_(kDefaultInitialDorientationEstimate),
         initial_drate_estimate_(kDefaultInitialDrateEstimate),
         outlier_threshold_degrees_(kDefaultOutlierThresholdDegrees),
-        maximum_outlier_count_(kDefaultMaximumOutlierCount)
+        maximum_outlier_count_(kDefaultMaximumOutlierCount),
+        output_minimal_quaternions_(kOutputMinimalQuaternions)
   {
   }
   ;
@@ -166,6 +168,7 @@ class RotationalEstimatorParameters
   Eigen::Vector3d initial_drate_estimate_;
   double outlier_threshold_degrees_;
   int maximum_outlier_count_;
+  bool output_minimal_quaternions_;
 };
 
 class RotationalEstimatorResults
@@ -219,12 +222,9 @@ class RotationalEstimator
   // Return intermediate results structure
   RotationalEstimatorResults getResults() const { return estimator_results_; }
   // Return estimated orientation
-  const Eigen::Quaterniond getEstimatedOrientation() const { return orientation_estimate_B_W_; }
+  Eigen::Quaterniond getEstimatedOrientation() const;
   // Return estimated angular velocity
-  Eigen::Vector3d getEstimatedRate() const
-  {
-    return rate_estimate_B_;
-  }
+  Eigen::Vector3d getEstimatedRate() const;
 
  private:
 

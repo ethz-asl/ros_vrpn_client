@@ -60,6 +60,8 @@ void ViconOdometryEstimator::initializeParameters(ros::NodeHandle& nh)
               rotationalEstimatorParameters.outlier_threshold_degrees_);
   nh.getParam("rotational_estimator/maximum_outlier_count",
               rotationalEstimatorParameters.maximum_outlier_count_);
+  nh.getParam("rotational_estimator/output_minimal_quaternions",
+              rotationalEstimatorParameters.output_minimal_quaternions_);
 
   // Setting parameters in estimator
   vicon_estimator_.setParameters(translationalEstimatorParameters, rotationalEstimatorParameters);

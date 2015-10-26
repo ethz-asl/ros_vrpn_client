@@ -10,7 +10,7 @@
     <param name="rotational_estimator/orientation_process_covariance" value="0.00001" />
     <param name="rotational_estimator/rate_process_covariance" value="10" />
     <param name="rotational_estimator/orientation_measurementCovariance" value="0.005" />
-    <param name="rotational_estimator/outlier_threshold_degrees" value="10" />
+    <param name="rotational_estimator/outlier_threshold_degrees" value="30" />
     <param name="rotational_estimator/maximum_outlier_count" value="50" />
     <param name="rotational_estimator/output_minimal_quaternions" value="false" />
   </node>

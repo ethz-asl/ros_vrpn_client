@@ -19,6 +19,10 @@
  * limitations under the License.
  */
 
+#include <iostream>
+#include <stdio.h>
+#include <math.h>
+
 #include "vicon_estimator.h"
 
 namespace vicon_estimator {
@@ -84,7 +88,7 @@ TranslationalEstimator::TranslationalEstimator()
 void TranslationalEstimator::updateEstimate(const Eigen::Vector3d& pos_measured_W)
 {
   // Saving the measurement to the intermediate results
-  estimator_results_.position_measured = pos_measured_W;
+  estimator_results_.position_measured_ = pos_measured_W;
   // Saving the old state to the intermediate results
   estimator_results_.position_old_ = position_estimate_W_;
   estimator_results_.velocity_old_ = velocity_estimate_W_;
@@ -170,6 +174,25 @@ void RotationalEstimator::setParameters(const RotationalEstimatorParameters& est
 {
   estimator_parameters_ = estimator_parameters;
 }
+
+Eigen::Quaterniond RotationalEstimator::getEstimatedOrientation() const
+{
+  Eigen::Quaterniond orientation_for_return;
+  // Swapping to minimal (but redundant) representation if requested
+  if (estimator_parameters_.output_minimal_quaternions_) {
+    double correction_factor = orientation_estimate_B_W_.w() / std::abs(orientation_estimate_B_W_.w());
+    orientation_for_return = Eigen::Quaterniond(correction_factor * orientation_estimate_B_W_.coeffs());
+  } else {
+    orientation_for_return = orientation_estimate_B_W_;
+  }
+  return orientation_for_return;
+}
+
+Eigen::Vector3d RotationalEstimator::getEstimatedRate() const
+{
+  return rate_estimate_B_;
+}
+
 
 void RotationalEstimator::updateEstimate(const Eigen::Quaterniond& orientation_measured_B_W)
 {
@@ -322,18 +345,40 @@ void RotationalEstimator::updateEstimateUpdateErrorEstimate(
   Eigen::Vector3d orientation_estimate_priori_vector = orientation_estimate_priori.vec();
   Hdq
       << orientation_estimate_priori.w() * Eigen::Matrix<double, 3, 3>::Identity()
-          + skewMatrix(orientation_estimate_priori_vector), -orientation_estimate_priori.vec()
-      .transpose();
+           + skewMatrix(orientation_estimate_priori_vector),
+           -orientation_estimate_priori.vec().transpose();
   H << Hdq, Eigen::Matrix<double, 4, 3>::Zero();
-  // Predicting the measurement
-  Eigen::Quaterniond orientation_predicted = Eigen::Quaterniond(
+
+  // Calculating the measured error quaternion
+  Eigen::Quaterniond error_orientation = orientation_measured * orientation_estimate_priori.inverse();
+
+  // Calculating the predicted measurement dependant on the sign of the measured error quaternion
+  Eigen::Quaterniond orientation_predicted;
+  if (error_orientation.w() >= 0) {
+    // Assigning the flag indicating that this measurment is not flipped
+    estimator_results_.measurement_flip_flag_ = false;
+    // Calculating the predicted measurement
+    orientation_predicted = Eigen::Quaterniond(
       Hdq * dorientation_estimate_priori + orientation_estimate_priori.coeffs());
+  } else {
+    // Assigning the flag indicating that this measurment is flipped
+    estimator_results_.measurement_flip_flag_ = true;
+    // Calculating the predicted measurement
+    orientation_predicted = Eigen::Quaterniond(
+      Hdq * dorientation_estimate_priori + orientation_estimate_priori.coeffs());
+  }
+
+  // Calculating the measurement residual
+  Eigen::Vector4d measurement_residual;
+  measurement_residual = orientation_measured.coeffs() - orientation_predicted.coeffs();
+
   // Computing the Kalman gain
   Eigen::Matrix<double, 4, 4> S = H * covariance_priori * H.transpose() + measurement_covariance_;
   Eigen::Matrix<double, 6, 4> K;
   K = covariance_priori * H.transpose() * S.inverse();
+
   // Correcting the state
-  *dx_m = dx_priori + K * (orientation_measured.coeffs() - orientation_predicted.coeffs());
+  *dx_m = dx_priori + K * measurement_residual;
   // Updating the covariance
   *covariance_measurement = (Eigen::Matrix<double, 6, 6>::Identity() - K * H) * covariance_priori;
   //*covariance_measurement = (Eigen::Matrix<double, 6, 6>::Identity() - K*H)*P_p*((Eigen::Matrix<double, 6, 6>::Identity() - K*H).transpose()) + K*measurementCovariance*K.transpose();
@@ -348,10 +393,20 @@ void RotationalEstimator::updateEstimateRecombineErrorGlobal(
   Eigen::Matrix<double, 3, 1> rate_estimate_priori = x_priori.block<3, 1>(4, 0);
   Eigen::Matrix<double, 3, 1> dorientation_estimate_measurement = dx_measurement->block<3, 1>(0, 0);
   Eigen::Matrix<double, 3, 1> drate_estimate_measurement = dx_measurement->block<3, 1>(3, 0);
+
   // Completing the error quaternion
-  Eigen::Quaterniond dorientation_estimate_measurement_quaternion = Eigen::Quaterniond(
+  // The sign real part of the full quaternion was calculated in the error quaternion measurement update step 
+  Eigen::Quaterniond dorientation_estimate_measurement_quaternion;
+  if (estimator_results_.measurement_flip_flag_ == false) {
+    dorientation_estimate_measurement_quaternion = Eigen::Quaterniond(
       1.0, dorientation_estimate_measurement.x(), dorientation_estimate_measurement.y(),
       dorientation_estimate_measurement.z());
+  } else {
+    dorientation_estimate_measurement_quaternion = Eigen::Quaterniond(
+      -1.0, dorientation_estimate_measurement.x(), dorientation_estimate_measurement.y(),
+      dorientation_estimate_measurement.z());
+  }
+
   // Using estimated error states to correct global estimate states
   Eigen::Quaterniond orientation_estimate_measurement = orientation_estimate_priori
       * dorientation_estimate_measurement_quaternion;
@@ -398,14 +453,22 @@ bool RotationalEstimator::detectMeasurementOutlier(const Eigen::Quaterniond& ori
     return false;
   }
 
-  // Constructing the quaternion representing the body to measurement rotation
-  Eigen::Quaterniond rotation_subsequent_measurements = orientation_measured
-      * orientation_measured_old_.inverse();
-  // Calculating a measure of the size of the error quaternion
-  double rotation_magnitude_radians = quaternionRotationMagnitude(rotation_subsequent_measurements);
+  // Constructing the quaternion representing the rotation between subsquent measurements
+  Eigen::Quaterniond q_Z_Z1_ = orientation_measured * orientation_measured_old_.inverse();
+  // Calculating the quaternion magnitude
+  double q_Z_Z1_magnitude_ = quaternionRotationMagnitude(q_Z_Z1_);
+
+  // Constructing the quaternion representing the rotation between the body a measurement
+  Eigen::Quaterniond q_Z_B_ = orientation_measured * orientation_estimate_B_W_.inverse();
+  // Calculating the quaternion magnitude
+  double q_Z_B_magnitude_ = quaternionRotationMagnitude(q_Z_B_);
+
+  // Writing the error quaternions and their magnitude to the intermediate results structure
+  estimator_results_.q_Z_Z1_ = q_Z_Z1_;
+  estimator_results_.q_Z_B_ = q_Z_B_;
 
   // Detecting if the measurement is an outlier
-  bool measurement_outlier_flag = rotation_magnitude_radians
+  bool measurement_outlier_flag = q_Z_Z1_magnitude_ 
       >= estimator_parameters_.outlier_threshold_degrees_ * M_PI / 180.0;
 
   // After a certain number of measurements have been ignored in a row
@@ -413,6 +476,9 @@ bool RotationalEstimator::detectMeasurementOutlier(const Eigen::Quaterniond& ori
   if (outlier_counter_ >= estimator_parameters_.maximum_outlier_count_) {
     measurement_outlier_flag = false;
   }
+
+  // Saving the flag to the intermediate results structure
+  estimator_results_.measurement_outlier_flag_ = measurement_outlier_flag;
 
   // If rotation too great indicate that measurement is corrupted
   if (measurement_outlier_flag) {

@@ -19,6 +19,8 @@
  * limitations under the License.
  */
 
+#include <eigen_conversions/eigen_msg.h>
+
 #include "vicon_odometry_estimator.h"
 
 namespace vicon_estimator {
@@ -58,6 +60,8 @@ void ViconOdometryEstimator::initializeParameters(ros::NodeHandle& nh)
               rotationalEstimatorParameters.outlier_threshold_degrees_);
   nh.getParam("rotational_estimator/maximum_outlier_count",
               rotationalEstimatorParameters.maximum_outlier_count_);
+  nh.getParam("rotational_estimator/output_minimal_quaternions",
+              rotationalEstimatorParameters.output_minimal_quaternions_);
 
   // Setting parameters in estimator
   vicon_estimator_.setParameters(translationalEstimatorParameters, rotationalEstimatorParameters);
@@ -87,45 +91,28 @@ void ViconOdometryEstimator::publishIntermediateResults(ros::Time timestamp)
   msg.header.stamp = timestamp;
 
   // Writing the measurement to the message object
-  msg.pos_measured.x = translational_estimator_results.position_measured.x();
-  msg.pos_measured.y = translational_estimator_results.position_measured.y();
-  msg.pos_measured.z = translational_estimator_results.position_measured.z();
+  tf::vectorEigenToMsg(translational_estimator_results.position_measured_, msg.pos_measured);
   // Writing the old estimates to the message object
-  msg.pos_old.x = translational_estimator_results.position_old_.x();
-  msg.pos_old.y = translational_estimator_results.position_old_.y();
-  msg.pos_old.z = translational_estimator_results.position_old_.z();
-  msg.vel_old.x = translational_estimator_results.velocity_old_.x();
-  msg.vel_old.y = translational_estimator_results.velocity_old_.y();
-  msg.vel_old.z = translational_estimator_results.velocity_old_.z();
+  tf::vectorEigenToMsg(translational_estimator_results.position_old_, msg.pos_old);
+  tf::vectorEigenToMsg(translational_estimator_results.velocity_old_, msg.vel_old);
   // Posteriori results
-  msg.pos_est.x = translational_estimator_results.position_estimate_.x();
-  msg.pos_est.y = translational_estimator_results.position_estimate_.y();
-  msg.pos_est.z = translational_estimator_results.position_estimate_.z();
-  msg.vel_est.x = translational_estimator_results.velocity_estimate_.x();
-  msg.vel_est.y = translational_estimator_results.velocity_estimate_.y();
-  msg.vel_est.z = translational_estimator_results.velocity_estimate_.z();
+  tf::vectorEigenToMsg(translational_estimator_results.position_estimate_, msg.pos_est);
+  tf::vectorEigenToMsg(translational_estimator_results.velocity_estimate_, msg.vel_est);
 
   // Writing the measurement to the message object
-  msg.quat_measured.w = rotational_estimator_results.orientation_measured_.w();
-  msg.quat_measured.x = rotational_estimator_results.orientation_measured_.x();
-  msg.quat_measured.y = rotational_estimator_results.orientation_measured_.y();
-  msg.quat_measured.z = rotational_estimator_results.orientation_measured_.z();
+  tf::quaternionEigenToMsg(rotational_estimator_results.orientation_measured_, msg.quat_measured);
   // Writing the old estimates to the message object
-  msg.quat_old.w = rotational_estimator_results.orientation_old_.w();
-  msg.quat_old.x = rotational_estimator_results.orientation_old_.x();
-  msg.quat_old.y = rotational_estimator_results.orientation_old_.y();
-  msg.quat_old.z = rotational_estimator_results.orientation_old_.z();
-  msg.omega_old.x = rotational_estimator_results.rate_old_.x();
-  msg.omega_old.y = rotational_estimator_results.rate_old_.y();
-  msg.omega_old.z = rotational_estimator_results.rate_old_.z();
+  tf::quaternionEigenToMsg(rotational_estimator_results.orientation_old_, msg.quat_old); 
+  tf::vectorEigenToMsg(rotational_estimator_results.rate_old_, msg.omega_old);
   // Posteriori results
-  msg.quat_est.w = rotational_estimator_results.orientation_estimate_.w();
-  msg.quat_est.x = rotational_estimator_results.orientation_estimate_.x();
-  msg.quat_est.y = rotational_estimator_results.orientation_estimate_.y();
-  msg.quat_est.z = rotational_estimator_results.orientation_estimate_.z();
-  msg.omega_est.x = rotational_estimator_results.rate_estimate_.x();
-  msg.omega_est.y = rotational_estimator_results.rate_estimate_.y();
-  msg.omega_est.z = rotational_estimator_results.rate_estimate_.z();
+  tf::quaternionEigenToMsg(rotational_estimator_results.orientation_estimate_, msg.quat_est);
+  tf::vectorEigenToMsg(rotational_estimator_results.rate_estimate_, msg.omega_est);
+
+  // Data to do with the orientation measurement outlier detection
+  msg.outlier_flag.data = rotational_estimator_results.measurement_outlier_flag_;
+  msg.measurement_flip_flag.data = rotational_estimator_results.measurement_flip_flag_;
+  tf::quaternionEigenToMsg(rotational_estimator_results.q_Z_Z1_, msg.q_Z_Z1);
+  tf::quaternionEigenToMsg(rotational_estimator_results.q_Z_B_, msg.q_Z_B);
 
   // Publishing estimator message
   publisher_.publish(msg);

@@ -22,10 +22,6 @@
 #ifndef VICON_ESTIMATOR_H
 #define VICON_ESTIMATOR_H
 
-#include <iostream>
-#include <stdio.h>
-#include <math.h>
-
 #include <Eigen/Geometry>
 
 namespace vicon_estimator {
@@ -43,6 +39,7 @@ class TranslationalEstimatorParameters
 {
 
  public:
+  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
   // Constructor
   TranslationalEstimatorParameters()
       : dt_(kDefaultDt),
@@ -67,7 +64,7 @@ class TranslationalEstimatorResults
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
   // Constructor
   TranslationalEstimatorResults()
-      : position_measured(Eigen::Vector3d::Zero()),
+      : position_measured_(Eigen::Vector3d::Zero()),
         position_old_(Eigen::Vector3d::Zero()),
         velocity_old_(Eigen::Vector3d::Zero()),
         position_estimate_(Eigen::Vector3d::Zero()),
@@ -76,7 +73,7 @@ class TranslationalEstimatorResults
   }
 
   // Intermediate Estimator results
-  Eigen::Vector3d position_measured;
+  Eigen::Vector3d position_measured_;
   Eigen::Vector3d position_old_;
   Eigen::Vector3d velocity_old_;
   Eigen::Vector3d position_estimate_;
@@ -133,11 +130,13 @@ static const Eigen::Vector3d kDefaultInitialDorientationEstimate = Eigen::Vector
 static const Eigen::Vector3d kDefaultInitialDrateEstimate = Eigen::Vector3d::Zero();
 static const double kDefaultOutlierThresholdDegrees = 30.0;
 static const int kDefaultMaximumOutlierCount = 10;
+static const bool kOutputMinimalQuaternions = false;
 
 class RotationalEstimatorParameters
 {
 
  public:
+  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
   // Constructor
   RotationalEstimatorParameters()
       : dt_(kDefaultDt),
@@ -151,7 +150,8 @@ class RotationalEstimatorParameters
         initial_dorientation_estimate_(kDefaultInitialDorientationEstimate),
         initial_drate_estimate_(kDefaultInitialDrateEstimate),
         outlier_threshold_degrees_(kDefaultOutlierThresholdDegrees),
-        maximum_outlier_count_(kDefaultMaximumOutlierCount)
+        maximum_outlier_count_(kDefaultMaximumOutlierCount),
+        output_minimal_quaternions_(kOutputMinimalQuaternions)
   {
   }
   ;
@@ -168,6 +168,7 @@ class RotationalEstimatorParameters
   Eigen::Vector3d initial_drate_estimate_;
   double outlier_threshold_degrees_;
   int maximum_outlier_count_;
+  bool output_minimal_quaternions_;
 };
 
 class RotationalEstimatorResults
@@ -181,7 +182,11 @@ class RotationalEstimatorResults
         orientation_old_(Eigen::Quaterniond::Identity()),
         rate_old_(Eigen::Vector3d::Zero()),
         orientation_estimate_(Eigen::Quaterniond::Identity()),
-        rate_estimate_(Eigen::Vector3d::Zero())
+        rate_estimate_(Eigen::Vector3d::Zero()),
+        measurement_outlier_flag_(false),
+        measurement_flip_flag_(false),
+        q_Z_Z1_(Eigen::Quaterniond::Identity()),
+        q_Z_B_(Eigen::Quaterniond::Identity())
   {
   }
   ;
@@ -192,6 +197,10 @@ class RotationalEstimatorResults
   Eigen::Vector3d rate_old_;
   Eigen::Quaterniond orientation_estimate_;
   Eigen::Vector3d rate_estimate_;
+  bool measurement_outlier_flag_;
+  bool measurement_flip_flag_;
+  Eigen::Quaterniond q_Z_Z1_;
+  Eigen::Quaterniond q_Z_B_;
 
 };
 
@@ -213,12 +222,9 @@ class RotationalEstimator
   // Return intermediate results structure
   RotationalEstimatorResults getResults() const { return estimator_results_; }
   // Return estimated orientation
-  const Eigen::Quaterniond getEstimatedOrientation() const { return orientation_estimate_B_W_; }
+  Eigen::Quaterniond getEstimatedOrientation() const;
   // Return estimated angular velocity
-  Eigen::Vector3d getEstimatedRate() const
-  {
-    return rate_estimate_B_;
-  }
+  Eigen::Vector3d getEstimatedRate() const;
 
  private:
 

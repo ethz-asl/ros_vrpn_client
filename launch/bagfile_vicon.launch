@@ -4,13 +4,14 @@
     <param name="object_name" value="$(arg object_name)" />
     <param name="vicon_estimator/dt" value="0.01" />
     <param name="translational_estimator/kp" value="1.0" />
-    <param name="translational_estimator/kv" value="10.0" />
+    <param name="translational_estimator/kv" value="0.1" />
     <param name="rotational_estimator/orientation_estimate_initial_covariance" value="1" />
     <param name="rotational_estimator/rate_estimate_initial_covariance" value="1" />
-    <param name="rotational_estimator/orientation_process_covariance" value="0.01" />
-    <param name="rotational_estimator/rate_process_covariance" value="1" />
-    <param name="rotational_estimator/orientation_measurementCovariance" value="0.0005" />
+    <param name="rotational_estimator/orientation_process_covariance" value="0.00001" />
+    <param name="rotational_estimator/rate_process_covariance" value="10" />
+    <param name="rotational_estimator/orientation_measurementCovariance" value="0.005" />
     <param name="rotational_estimator/outlier_threshold_degrees" value="30" />
-    <param name="rotational_estimator/maximum_outlier_count" value="10" />    
+    <param name="rotational_estimator/maximum_outlier_count" value="50" />
+    <param name="rotational_estimator/output_minimal_quaternions" value="false" />
   </node>
 </launch>

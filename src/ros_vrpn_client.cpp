@@ -204,7 +204,7 @@ bool inline tracker_is_equal(const vrpn_TRACKERCB& vprn_data_1, const vrpn_TRACK
           and vprn_data_1.quat[1] == vprn_data_2.quat[1]
           and vprn_data_1.quat[2] == vprn_data_2.quat[2]
           and vprn_data_1.quat[3] == vprn_data_2.quat[3]
-          and vprn_data_1.pos[0] == vprn_data_2.pos[0] 
+          and vprn_data_1.pos[0] == vprn_data_2.pos[0]
           and vprn_data_1.pos[1] == vprn_data_2.pos[1]
           and vprn_data_1.pos[2] == vprn_data_2.pos[2] );
 }
@@ -305,10 +305,16 @@ int main(int argc, char* argv[])
   std::cout << "vrpn_coordinate_system:" << coordinate_system_string << std::endl;
   std::cout << "object_name:" << object_name << std::endl;
 
-  // Checking for valid coordinate specification
-  CHECK(coordinate_system_string.compare("vicon")
-        or coordinate_system_string.compare("optitrack"))
-        << "ROS param vrpn_coordinate_system should be either 'vicon' or 'optitrack'!";
+  if (coordinate_system_string == "vicon") {
+    coordinate_system = CoordinateSystem::vicon;
+  }
+  else if (coordinate_system_string == "optitrack") {
+    coordinate_system = CoordinateSystem::optitrack;
+  }
+  else {
+    ROS_FATAL("ROS param vrpn_coordinate_system should be either 'vicon' or 'optitrack'!");
+    return EXIT_FAILURE;
+  }
 
   // Creating the estimator
   vicon_odometry_estimator = new vicon_estimator::ViconOdometryEstimator(private_nh);

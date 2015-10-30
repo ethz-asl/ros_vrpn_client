@@ -71,9 +71,16 @@ struct TargetState
 // Available coordinate systems.
 enum CoordinateSystem
 {
-  vicon,
-  optitrack
+  kVicon,
+  kOptitrack
 } coordinate_system;
+
+// Available timestamping options.
+enum TimestampingSystem
+{
+  kViconStamp,
+  kRosStamp
+} timestamping_system;
 
 // Global target descriptions.
 TargetState* target_state;
@@ -174,7 +181,7 @@ void inline correctForCoordinateSystem(const Eigen::Quaterniond& orientation_in,
   // Correcting measurements based on coordinate system
   switch (coordinate_system)
   {
-    case optitrack:
+    case kOptitrack:
     {
       // Here we rotate the Optitrack measured quaternion by qFix, a
       // Pi/2 rotation around the x-axis. By doing so we convert from
@@ -183,7 +190,7 @@ void inline correctForCoordinateSystem(const Eigen::Quaterniond& orientation_in,
       *position_measured_W = Eigen::Vector3d(position_in.x(), -position_in.z(), position_in.y());
       break;
     }
-    case vicon:
+    case kVicon:
     {
       *orientation_measured_B_W = orientation_in;
       *position_measured_W = position_in;
@@ -193,6 +200,35 @@ void inline correctForCoordinateSystem(const Eigen::Quaterniond& orientation_in,
     {
       ROS_FATAL("Coordinate system not defined!");
       break;
+    }
+  }
+}
+
+void inline getTimeStamp(const ros::Time& vicon_stamp, ros::Time* timestamp)
+{
+  // Stamping message depending on selected stamping source
+  // vicon: Use stamp attached to the vrpn_client callback comming from the 
+  //        vicon system. Not that this timestamp may not be synced to the
+  //        ros time. Additionally the timestamping contains some delay which
+  //        is a fixed number of hours. This is removed below.
+  //
+  // ros:   Stamp the message on arrival with the current ros time.
+  switch (timestamping_system)
+  {
+    case kViconStamp:
+    {
+      // DEBUG(millanea): Trying to get a clearer picture of what the fuck is 
+      //                  going on.
+      std::cout << "vicon_stamp: " << vicon_stamp << std::endl;
+      ros::Time ros_stamp = ros::Time::now();
+      std::cout << "ros_stamp: " << ros_stamp << std::endl;
+      // Output
+      *timestamp = vicon_stamp;
+    }
+    case kRosStamp:
+    {
+      // Output
+      *timestamp = ros::Time::now();
     }
   }
 }
@@ -240,6 +276,12 @@ void VRPN_CALLBACK track_target(void *, const vrpn_TRACKERCB tracker)
   if (std::abs(time_diff.toSec()) > 0.1) {
     ROS_WARN_STREAM_THROTTLE(1, "Time delay: " << time_diff.toSec());
   }
+
+  // TODO(millanea): UP TO HERE.
+  //                 Try to sort out the absolute hackery above. Will be useful for vicon to csv anyway.
+  ros::Time tracker_time(tracker.msg_time.tv_sec, tracker.msg_time.tv_usec*kMicroSecToNanoSec);
+  ros::Time timestamp2;
+  getTimeStamp(tracker_time, &timestamp2);
 
   // Updating the estimates with the new measurements.
   vicon_odometry_estimator->updateEstimate(position_measured_W, orientation_measured_B_W);
@@ -293,28 +335,47 @@ int main(int argc, char* argv[])
   std::string vrpn_server_ip;
   int vrpn_port;
   std::string trackedObjectName;
+  std::string timestamping_system_string;
 
   private_nh.param<std::string>("vrpn_server_ip", vrpn_server_ip, std::string());
   private_nh.param<int>("vrpn_port", vrpn_port, 3883);
   private_nh.param<std::string>("vrpn_coordinate_system", coordinate_system_string, "vicon");
   private_nh.param<std::string>("object_name", object_name, "auk");
+  private_nh.param<std::string>("timestamping_system", timestamping_system_string, "auk");
 
   // Debug output
   std::cout << "vrpn_server_ip:" << vrpn_server_ip << std::endl;
   std::cout << "vrpn_port:" << vrpn_port << std::endl;
   std::cout << "vrpn_coordinate_system:" << coordinate_system_string << std::endl;
   std::cout << "object_name:" << object_name << std::endl;
+  std::cout << "timestamping_system:" << timestamping_system_string << std::endl;
 
+  // Setting the coordinate system based on the ros param
   if (coordinate_system_string == "vicon") {
-    coordinate_system = CoordinateSystem::vicon;
+    coordinate_system = CoordinateSystem::kVicon;
   }
   else if (coordinate_system_string == "optitrack") {
-    coordinate_system = CoordinateSystem::optitrack;
+    coordinate_system = CoordinateSystem::kOptitrack;
   }
   else {
     ROS_FATAL("ROS param vrpn_coordinate_system should be either 'vicon' or 'optitrack'!");
     return EXIT_FAILURE;
   }
+
+  // Setting the time stamping option based on the ros param
+  if (timestamping_system_string == "vicon") {
+    timestamping_system = TimestampingSystem::kViconStamp;
+  }
+  else if (timestamping_system_string == "ros") {
+    timestamping_system = TimestampingSystem::kRosStamp;
+  }
+  else {
+    ROS_FATAL("ROS param timestamping_system should be either 'vicon' or 'ros'!");
+    return EXIT_FAILURE;
+  }
+
+
+
 
   // Creating the estimator
   vicon_odometry_estimator = new vicon_estimator::ViconOdometryEstimator(private_nh);

@@ -78,7 +78,7 @@ enum CoordinateSystem
 // Available timestamping options.
 enum TimestampingSystem
 {
-  kViconStamp,
+  kTrackerStamp,
   kRosStamp
 } timestamping_system;
 
@@ -207,20 +207,20 @@ void inline correctForCoordinateSystem(const Eigen::Quaterniond& orientation_in,
 void inline getTimeStamp(const ros::Time& vicon_stamp, ros::Time* timestamp)
 {
   // Stamping message depending on selected stamping source
-  // vicon: Use stamp attached to the vrpn_client callback comming from the 
-  //        vicon system. Not that this timestamp may not be synced to the
-  //        ros time. Additionally the timestamping contains some delay which
-  //        is a fixed number of hours due (possibly) to a timezone difference
-  //        in the tracker software. These delay hours are removed in this
-  //        function.
-  // ros:   Stamp the message on arrival with the current ros time.
+  // tracker: Use stamp attached to the vrpn_client callback comming from the 
+  //          tracker system. Not that this timestamp may not be synced to the
+  //          ros time. Additionally the timestamping contains some delay which
+  //          is a fixed number of hours due (possibly) to a timezone difference
+  //          in the tracker software. These delay hours are removed in this
+  //          function.
+  // ros:     Stamp the message on arrival with the current ros time.
   switch (timestamping_system)
   {
-    case kViconStamp:
+    case kTrackerStamp:
     {
       // Retreiving current ROS Time
       ros::Time ros_stamp = ros::Time::now();
-      // Calculating the difference between the vicon attached timestamp and the current ROS time.
+      // Calculating the difference between the tracker attached timestamp and the current ROS time.
       ros::Duration time_diff = vicon_stamp - ros_stamp;
       // Working out the hours difference in hours and then rounding to the closest hour
       const double kHoursToSec = 3600;
@@ -339,7 +339,7 @@ int main(int argc, char* argv[])
   private_nh.param<int>("vrpn_port", vrpn_port, 3883);
   private_nh.param<std::string>("vrpn_coordinate_system", coordinate_system_string, "vicon");
   private_nh.param<std::string>("object_name", object_name, "auk");
-  private_nh.param<std::string>("timestamping_system", timestamping_system_string, "ros");
+  private_nh.param<std::string>("timestamping_system", timestamping_system_string, "tracker");
 
   // Debug output
   std::cout << "vrpn_server_ip:" << vrpn_server_ip << std::endl;
@@ -361,14 +361,14 @@ int main(int argc, char* argv[])
   }
 
   // Setting the time stamping option based on the ros param
-  if (timestamping_system_string == "vicon") {
-    timestamping_system = TimestampingSystem::kViconStamp;
+  if (timestamping_system_string == "tracker") {
+    timestamping_system = TimestampingSystem::kTrackerStamp;
   }
   else if (timestamping_system_string == "ros") {
     timestamping_system = TimestampingSystem::kRosStamp;
   }
   else {
-    ROS_FATAL("ROS param timestamping_system should be either 'vicon' or 'ros'!");
+    ROS_FATAL("ROS param timestamping_system should be either 'tracker' or 'ros'!");
     return EXIT_FAILURE;
   }
 

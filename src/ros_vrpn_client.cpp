@@ -339,7 +339,7 @@ int main(int argc, char* argv[])
   private_nh.param<int>("vrpn_port", vrpn_port, 3883);
   private_nh.param<std::string>("vrpn_coordinate_system", coordinate_system_string, "vicon");
   private_nh.param<std::string>("object_name", object_name, "auk");
-  private_nh.param<std::string>("timestamping_system", timestamping_system_string, "blah");
+  private_nh.param<std::string>("timestamping_system", timestamping_system_string, "ros");
 
   // Debug output
   std::cout << "vrpn_server_ip:" << vrpn_server_ip << std::endl;
@@ -371,9 +371,6 @@ int main(int argc, char* argv[])
     ROS_FATAL("ROS param timestamping_system should be either 'vicon' or 'ros'!");
     return EXIT_FAILURE;
   }
-
-
-
 
   // Creating the estimator
   vicon_odometry_estimator = new vicon_estimator::ViconOdometryEstimator(private_nh);

@@ -2,5 +2,6 @@
   <node name="starleth" type="ros_vrpn_client" pkg="ros_vrpn_client" output="screen">
     <param name="vrpn_server_ip" value="192.168.1.101" />
     <param name="vrpn_coordinate_system" value="optitrack" />
+    <param name="timestamping_system" value="tracker" />
   </node>
 </launch>

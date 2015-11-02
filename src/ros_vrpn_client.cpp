@@ -71,9 +71,16 @@ struct TargetState
 // Available coordinate systems.
 enum CoordinateSystem
 {
-  vicon,
-  optitrack
+  kVicon,
+  kOptitrack
 } coordinate_system;
+
+// Available timestamping options.
+enum TimestampingSystem
+{
+  kTrackerStamp,
+  kRosStamp
+} timestamping_system;
 
 // Global target descriptions.
 TargetState* target_state;
@@ -174,7 +181,7 @@ void inline correctForCoordinateSystem(const Eigen::Quaterniond& orientation_in,
   // Correcting measurements based on coordinate system
   switch (coordinate_system)
   {
-    case optitrack:
+    case kOptitrack:
     {
       // Here we rotate the Optitrack measured quaternion by qFix, a
       // Pi/2 rotation around the x-axis. By doing so we convert from
@@ -183,7 +190,7 @@ void inline correctForCoordinateSystem(const Eigen::Quaterniond& orientation_in,
       *position_measured_W = Eigen::Vector3d(position_in.x(), -position_in.z(), position_in.y());
       break;
     }
-    case vicon:
+    case kVicon:
     {
       *orientation_measured_B_W = orientation_in;
       *position_measured_W = position_in;
@@ -193,6 +200,47 @@ void inline correctForCoordinateSystem(const Eigen::Quaterniond& orientation_in,
     {
       ROS_FATAL("Coordinate system not defined!");
       break;
+    }
+  }
+}
+
+void inline getTimeStamp(const ros::Time& vicon_stamp, ros::Time* timestamp)
+{
+  // Stamping message depending on selected stamping source
+  // tracker: Use stamp attached to the vrpn_client callback comming from the 
+  //          tracker system. Not that this timestamp may not be synced to the
+  //          ros time. Additionally the timestamping contains some delay which
+  //          is a fixed number of hours due (possibly) to a timezone difference
+  //          in the tracker software. These delay hours are removed in this
+  //          function.
+  // ros:     Stamp the message on arrival with the current ros time.
+  switch (timestamping_system)
+  {
+    case kTrackerStamp:
+    {
+      // Retreiving current ROS Time
+      ros::Time ros_stamp = ros::Time::now();
+      // Calculating the difference between the tracker attached timestamp and the current ROS time.
+      ros::Duration time_diff = vicon_stamp - ros_stamp;
+      // Working out the hours difference in hours and then rounding to the closest hour
+      const double kHoursToSec = 3600;
+      double time_diff_h = time_diff.toSec() / kHoursToSec;
+      double time_diff_h_round = std::round(time_diff_h);
+      // Correcting the time stamp by the hours difference and reassembling timestamp
+      double time_correction_s = time_diff_h_round * kHoursToSec;
+      ros::Time vicon_stamp_corrected(vicon_stamp.sec - time_correction_s, vicon_stamp.nsec);
+      // Attaching the corrected timestamp
+      *timestamp = vicon_stamp_corrected;
+      // Outputting the time delay to the ROS console if bigger than 0.1s
+      ros::Duration time_diff_corrected = ros_stamp - vicon_stamp_corrected;
+      if (std::abs(time_diff_corrected.toSec()) > 0.1) {
+        ROS_WARN_STREAM_THROTTLE(1, "Time delay: " << time_diff_corrected.toSec());
+      }
+    }
+    case kRosStamp:
+    {
+      // Just attach the current ROS timestamp
+      *timestamp = ros::Time::now();
     }
   }
 }
@@ -227,19 +275,11 @@ void VRPN_CALLBACK track_target(void *, const vrpn_TRACKERCB tracker)
   }
   prev_tracker = tracker;
 
-  // Somehow the vrpn msgs are in a different time zone.
+  // Timestamping the incomming message
   const int kMicroSecToNanoSec = 1000;
-  const double kHoursToSec = 3600;
-  ros::Time timestamp_local = ros::Time::now();
-  int timediff_sec = std::round(double(timestamp_local.sec - tracker.msg_time.tv_sec) / kHoursToSec) * kHoursToSec;
-
-  int timestamp_nsec = tracker.msg_time.tv_usec * kMicroSecToNanoSec;
-  ros::Time timestamp = ros::Time(tracker.msg_time.tv_sec + timediff_sec, timestamp_nsec);
-
-  ros::Duration time_diff = ros::Time::now() - timestamp;
-  if (std::abs(time_diff.toSec()) > 0.1) {
-    ROS_WARN_STREAM_THROTTLE(1, "Time delay: " << time_diff.toSec());
-  }
+  ros::Time tracker_timestamp(tracker.msg_time.tv_sec, tracker.msg_time.tv_usec*kMicroSecToNanoSec);
+  ros::Time timestamp;
+  getTimeStamp(tracker_timestamp, &timestamp);
 
   // Updating the estimates with the new measurements.
   vicon_odometry_estimator->updateEstimate(position_measured_W, orientation_measured_B_W);
@@ -293,26 +333,42 @@ int main(int argc, char* argv[])
   std::string vrpn_server_ip;
   int vrpn_port;
   std::string trackedObjectName;
+  std::string timestamping_system_string;
 
   private_nh.param<std::string>("vrpn_server_ip", vrpn_server_ip, std::string());
   private_nh.param<int>("vrpn_port", vrpn_port, 3883);
   private_nh.param<std::string>("vrpn_coordinate_system", coordinate_system_string, "vicon");
   private_nh.param<std::string>("object_name", object_name, "auk");
+  private_nh.param<std::string>("timestamping_system", timestamping_system_string, "tracker");
 
   // Debug output
   std::cout << "vrpn_server_ip:" << vrpn_server_ip << std::endl;
   std::cout << "vrpn_port:" << vrpn_port << std::endl;
   std::cout << "vrpn_coordinate_system:" << coordinate_system_string << std::endl;
   std::cout << "object_name:" << object_name << std::endl;
+  std::cout << "timestamping_system:" << timestamping_system_string << std::endl;
 
+  // Setting the coordinate system based on the ros param
   if (coordinate_system_string == "vicon") {
-    coordinate_system = CoordinateSystem::vicon;
+    coordinate_system = CoordinateSystem::kVicon;
   }
   else if (coordinate_system_string == "optitrack") {
-    coordinate_system = CoordinateSystem::optitrack;
+    coordinate_system = CoordinateSystem::kOptitrack;
   }
   else {
     ROS_FATAL("ROS param vrpn_coordinate_system should be either 'vicon' or 'optitrack'!");
+    return EXIT_FAILURE;
+  }
+
+  // Setting the time stamping option based on the ros param
+  if (timestamping_system_string == "tracker") {
+    timestamping_system = TimestampingSystem::kTrackerStamp;
+  }
+  else if (timestamping_system_string == "ros") {
+    timestamping_system = TimestampingSystem::kRosStamp;
+  }
+  else {
+    ROS_FATAL("ROS param timestamping_system should be either 'tracker' or 'ros'!");
     return EXIT_FAILURE;
   }
 

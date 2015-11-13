@@ -231,11 +231,10 @@ void inline getTimeStamp(const ros::Time& vicon_stamp, ros::Time* timestamp)
       ros::Time vicon_stamp_corrected(vicon_stamp.sec - time_correction_s, vicon_stamp.nsec);
       // Attaching the corrected timestamp
       *timestamp = vicon_stamp_corrected;
-      // Outputting the time delay to the ROS console if bigger than 0.1s
+      // Outputting the time delay to the ROS console
       ros::Duration time_diff_corrected = ros_stamp - vicon_stamp_corrected;
-      if (std::abs(time_diff_corrected.toSec()) > 0.1) {
-        ROS_WARN_STREAM_THROTTLE(1, "Time delay: " << time_diff_corrected.toSec());
-      }
+      static const int kMaxMessagePeriod = 2;
+      ROS_WARN_STREAM_THROTTLE(kMaxMessagePeriod, "Time delay: " << time_diff_corrected.toSec());
     }
     case kRosStamp:
     {

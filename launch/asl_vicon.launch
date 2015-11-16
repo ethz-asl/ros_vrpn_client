@@ -5,6 +5,7 @@
     <param name="vrpn_coordinate_system" value="vicon" />
     <param name="timestamping_system" value="tracker" />
     <param name="object_name" value="$(arg object_name)" />
+    <param name="display_time_delay" value="true" />
     <param name="vicon_estimator/dt" value="0.01" />
     <param name="translational_estimator/kp" value="1.0" />
     <param name="translational_estimator/kv" value="0.1" />

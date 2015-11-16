@@ -91,6 +91,9 @@ std::string coordinate_system_string;
 bool fresh_data = false;
 vrpn_TRACKERCB prev_tracker;
 
+// Global indicating if we should display the time delays
+bool display_time_delay = true;
+
 // Pointer to the vicon estimator. Global such that it can be accessed from the callback.
 vicon_estimator::ViconOdometryEstimator* vicon_odometry_estimator = NULL;
 
@@ -232,9 +235,11 @@ void inline getTimeStamp(const ros::Time& vicon_stamp, ros::Time* timestamp)
       // Attaching the corrected timestamp
       *timestamp = vicon_stamp_corrected;
       // Outputting the time delay to the ROS console
-      ros::Duration time_diff_corrected = ros_stamp - vicon_stamp_corrected;
-      static const int kMaxMessagePeriod = 2;
-      ROS_WARN_STREAM_THROTTLE(kMaxMessagePeriod, "Time delay: " << time_diff_corrected.toSec());
+      if (display_time_delay) {
+        ros::Duration time_diff_corrected = ros_stamp - vicon_stamp_corrected;
+        static const int kMaxMessagePeriod = 2;
+        ROS_WARN_STREAM_THROTTLE(kMaxMessagePeriod, "Time delay: " << time_diff_corrected.toSec());
+      }
     }
     case kRosStamp:
     {
@@ -329,16 +334,17 @@ int main(int argc, char* argv[])
 
   target_state = new TargetState;
 
+  // Retrieving control parameters
   std::string vrpn_server_ip;
   int vrpn_port;
   std::string trackedObjectName;
   std::string timestamping_system_string;
-
   private_nh.param<std::string>("vrpn_server_ip", vrpn_server_ip, std::string());
   private_nh.param<int>("vrpn_port", vrpn_port, 3883);
   private_nh.param<std::string>("vrpn_coordinate_system", coordinate_system_string, "vicon");
   private_nh.param<std::string>("object_name", object_name, "auk");
   private_nh.param<std::string>("timestamping_system", timestamping_system_string, "tracker");
+  private_nh.param<bool>("display_time_delay", display_time_delay, true);
 
   // Debug output
   std::cout << "vrpn_server_ip:" << vrpn_server_ip << std::endl;

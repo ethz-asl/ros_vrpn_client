@@ -16,8 +16,12 @@ You have to start a ROS node per tracked object and the ROS node name has to be 
 
 Or in a launch file:
 
-    <node name="object_name" type="ros_vrpn_client" pkg="ros_vrpn_client" output="screen">
+    <arg name="object_name" default="some_object_name" />
+    <node name="some_object_name_vrpn_client" type="ros_vrpn_client" pkg="ros_vrpn_client" output="screen">
       <param name="vrpn_server_ip" value="192.168.1.100" />
+      <param name="object_name" value="$(arg object_name)" />
+      <!-- or directly:
+      <param name="object_name" value="some_object_name" /> -->
     </node>
 
 Installation HowTo

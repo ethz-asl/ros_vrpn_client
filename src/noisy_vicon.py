@@ -120,7 +120,7 @@ class NoisyVicon:
 
     if (self.publish_pose):
         self.pub_disturbed_pose.publish(self.pwc)
-    self.pub_point.publish(self.point)
+    self.point_pub.publish(self.point)
 
 if __name__ == '__main__':
 

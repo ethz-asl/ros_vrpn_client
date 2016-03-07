@@ -51,7 +51,7 @@ class NoisyVicon:
 
     self.transform = TransformStamped()
     self.transform.header = self.pwc.header
-    self.child_frame_id = self.mav_name
+    self.child_frame_id = self.mav_name + '_noisy'
 
     self.R_noise = 0.0
     self.theta_noise = 0.0

@@ -6,17 +6,20 @@ from math import *
 
 from sensor_msgs.msg import NavSatFix, Imu
 from nav_msgs.msg import Odometry
-from geometry_msgs.msg import PoseWithCovarianceStamped, PointStamped
+from geometry_msgs.msg import PoseWithCovarianceStamped, PointStamped, TransformStamped
 from std_msgs.msg import Float64
 import tf
 import sys
 
 class NoisyVicon:
   def __init__(self):
+    self.mav_name = rospy.get_param('~mav_name', 'mav')
     # Altitude source ('vicon'/'external')
     self.altitude_input = rospy.get_param('~altitude_input', 'vicon')
     # Whether to publish pose message or not (True/False)
     self.publish_pose = rospy.get_param('~publish_pose', True)
+    # Whether to publish transform message or not (True/False)
+    self.publish_transform = rospy.get_param('~publish_transform', True)
     # Maximum noise radius (polar coordinates) [m]
     self.max_noise_radius = rospy.get_param('~max_noise_radius', 0.0) # max tested: 0.15
     # Timeout between noise sampling updates [s]
@@ -46,6 +49,10 @@ class NoisyVicon:
     self.point = PointStamped()
     self.point.header = self.pwc.header
 
+    self.transform = TransformStamped()
+    self.transform.header = self.pwc.header
+    self.child_frame_id = self.mav_name
+
     self.R_noise = 0.0
     self.theta_noise = 0.0
     self.timer_pub = None
@@ -53,8 +60,9 @@ class NoisyVicon:
     self.got_odometry = False
 
     self.spoofed_gps_pub = rospy.Publisher('spoofed_gps', NavSatFix, queue_size=1)
-    self.disturbed_pose_pub = rospy.Publisher('disturbed_pose', PoseWithCovarianceStamped, queue_size=1,  tcp_nodelay=True)
-    self.point_pub = rospy.Publisher('vicon_point', PointStamped, queue_size=1,  tcp_nodelay=True)
+    self.pose_pub = rospy.Publisher('noisy_vicon_pose', PoseWithCovarianceStamped, queue_size=1,  tcp_nodelay=True)
+    self.point_pub = rospy.Publisher('noisy_vicon_point', PointStamped, queue_size=1,  tcp_nodelay=True)
+    self.transform_pub = rospy.Publisher('noisy_vicon_transform', TransformStamped, queue_size=1,  tcp_nodelay=True)
 
     self.altitude_sub = rospy.Subscriber('laser_altitude', Float64, self.altitude_callback, tcp_nodelay=True)
     self.gps_sub = rospy.Subscriber('gps', NavSatFix, self.gps_callback, tcp_nodelay=True)
@@ -78,20 +86,25 @@ class NoisyVicon:
     self.pwc.pose.pose.position.y = y
     self.point.point.x = x
     self.point.point.y = y
+    self.transform.translation.x = x
+    self.transform.translation.y = y
 
     # Take z based on chosen altitude input
     if (self.altitude_input == 'vicon'):
         self.pwc.pose.pose.position.z = data.pose.pose.position.z
         self.point.point.z = data.pose.pose.position.z
+        self.transform.translation.z = data.pose.pose.position.z
     elif (self.altitude_input == 'external'):
         self.pwc.pose.pose.position.z = self.latest_altitude_message.data
         self.point.point.z = self.latest_altitude_message.data
+        self.transform.translation.z = self.latest_altitude_message.data
     else:
         rospy.signal_shutdown("Unknown altitude input parameter")
         sys.exit()
 
     # Take orientation from IMU (pose only)
     self.pwc.pose.pose.orientation = self.latest_imu_message.orientation
+    self.transform.rotation = self.latest_imu_message.orientation
 
     if not self.got_odometry:
         print "NoisyVicon: initializing timers"
@@ -119,7 +132,9 @@ class NoisyVicon:
     self.point.point.y += self.R_noise*sin(self.theta_noise)
 
     if (self.publish_pose):
-        self.pub_disturbed_pose.publish(self.pwc)
+        self.pose_pub.publish(self.pwc)
+    if (self.publish_transform):
+        self.transform_pub.publish(self.transform)
     self.point_pub.publish(self.point)
 
 if __name__ == '__main__':

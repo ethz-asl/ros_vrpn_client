@@ -86,25 +86,25 @@ class NoisyVicon:
     self.pwc.pose.pose.position.y = y
     self.point.point.x = x
     self.point.point.y = y
-    self.transform.translation.x = x
-    self.transform.translation.y = y
+    self.transform.transform.translation.x = x
+    self.transform.transform.translation.y = y
 
     # Take z based on chosen altitude input
     if (self.altitude_input == 'vicon'):
         self.pwc.pose.pose.position.z = data.pose.pose.position.z
         self.point.point.z = data.pose.pose.position.z
-        self.transform.translation.z = data.pose.pose.position.z
+        self.transform.transform.translation.z = data.pose.pose.position.z
     elif (self.altitude_input == 'external'):
         self.pwc.pose.pose.position.z = self.latest_altitude_message.data
         self.point.point.z = self.latest_altitude_message.data
-        self.transform.translation.z = self.latest_altitude_message.data
+        self.transform.transform.translation.z = self.latest_altitude_message.data
     else:
         rospy.signal_shutdown("Unknown altitude input parameter")
         sys.exit()
 
     # Take orientation from IMU (pose only)
     self.pwc.pose.pose.orientation = self.latest_imu_message.orientation
-    self.transform.rotation = self.latest_imu_message.orientation
+    self.transform.transform.rotation = self.latest_imu_message.orientation
 
     if not self.got_odometry:
         print "NoisyVicon: initializing timers"

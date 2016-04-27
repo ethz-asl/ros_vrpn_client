@@ -297,7 +297,7 @@ void VRPN_CALLBACK track_target(void *, const vrpn_TRACKERCB tracker)
   vicon_odometry_estimator->publishIntermediateResults(timestamp);
 
   // Rotating the estimated global frame velocity into the body frame.
-  Eigen::Vector3d velocity_estimate_B = orientation_estimate_B_W.toRotationMatrix() * velocity_estimate_W;
+  Eigen::Vector3d velocity_estimate_B = orientation_estimate_B_W.toRotationMatrix().transpose() * velocity_estimate_W;
 
   // Populate the raw measured transform message. Published in main loop.
   target_state->measured_transform.header.stamp = timestamp;

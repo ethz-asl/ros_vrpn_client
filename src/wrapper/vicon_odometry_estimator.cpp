@@ -128,7 +128,8 @@ void ViconOdometryEstimator::publishIntermediateResults(ros::Time timestamp) {
 
 void ViconOdometryEstimator::updateEstimate(
     const Eigen::Vector3d& position_measured_W,
-    const Eigen::Quaterniond& orientation_measured_B_W, ros::Time timestamp) {
+    const Eigen::Quaterniond& orientation_measured_B_W,
+    ros::Time timestamp) {
   // Converting the ros time stamp to double
   double timestamp_double = timestamp.toSec();
   // Updating the estimates

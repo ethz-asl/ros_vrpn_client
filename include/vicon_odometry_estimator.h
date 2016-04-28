@@ -51,6 +51,7 @@ class ViconOdometryEstimator {
   void updateEstimate(const Eigen::Vector3d& position_measured_W,
                       const Eigen::Quaterniond& orientation_measured_B_W,
                       ros::Time timestamp);
+
   // Getter methods for estimates values
   Eigen::Vector3d getEstimatedPosition() const {
     return vicon_estimator_.getEstimatedPosition();

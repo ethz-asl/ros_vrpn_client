@@ -37,77 +37,90 @@
 
 // Class for collecting data and passing it to the underlying estimator
 class ViconDataListener {
+ public:
+  // Constructor
+  ViconDataListener(
+      ros::NodeHandle nh, ros::NodeHandle nh_private,
+      vicon_estimator::ViconOdometryEstimator* vicon_odometry_estimator)
+      : vicon_odometry_estimator_(vicon_odometry_estimator) {
+    // Subscribing to the raw vicon data
+    raw_transform_sub_ =
+        nh.subscribe("vrpn_client/raw_transform", 10,
+                     &ViconDataListener::transformStampedCallback, this);
+    // Advertising the estimated target state components
+    estimated_transform_pub_ =
+        nh_private.advertise<geometry_msgs::TransformStamped>(
+            "estimated_transform", 10);
+    estimated_odometry_pub_ =
+        nh_private.advertise<nav_msgs::Odometry>("estimated_odometry", 10);
+    // Getting the object name
+    nh_private.param<std::string>("object_name", object_name_, "auk");
+  }
 
-  public:
-    // Constructor
-    ViconDataListener(ros::NodeHandle nh, ros::NodeHandle nh_private,
-                      vicon_estimator::ViconOdometryEstimator* vicon_odometry_estimator) :
-        vicon_odometry_estimator_(vicon_odometry_estimator)
-    {
-      // Subscribing to the raw vicon data
-      raw_transform_sub_ = nh.subscribe("vrpn_client/raw_transform", 10,
-                                        &ViconDataListener::transformStampedCallback, this);
-      // Advertising the estimated target state components
-      estimated_transform_pub_ = nh_private.advertise<geometry_msgs::TransformStamped>(
-          "estimated_transform", 10);
-      estimated_odometry_pub_ = nh_private.advertise<nav_msgs::Odometry>(
-          "estimated_odometry", 10);
-      // Getting the object name
-      nh_private.param<std::string>("object_name", object_name_, "auk");
-    }
+  // Raw vicon data callback.
+  void transformStampedCallback(
+      const geometry_msgs::TransformStampedConstPtr& msg) {
+    // Extracting the relavent data from the message
+    Eigen::Vector3d position_measured_W;
+    Eigen::Quaterniond orientation_measured_B_W;
+    tf::vectorMsgToEigen(msg->transform.translation, position_measured_W);
+    tf::quaternionMsgToEigen(msg->transform.rotation, orientation_measured_B_W);
+    // Passing the received data to the estimator
+    vicon_odometry_estimator_->updateEstimate(position_measured_W,
+                                              orientation_measured_B_W);
+    // Retreiving the estimates
+    Eigen::Vector3d position_estimate_W =
+        vicon_odometry_estimator_->getEstimatedPosition();
+    Eigen::Vector3d velocity_estimate_W =
+        vicon_odometry_estimator_->getEstimatedVelocity();
+    Eigen::Quaterniond orientation_estimate_B_W =
+        vicon_odometry_estimator_->getEstimatedOrientation();
+    Eigen::Vector3d rate_estimate_B =
+        vicon_odometry_estimator_->getEstimatedAngularVelocity();
+    // Rotating the estimated global frame velocity into the body frame.
+    Eigen::Vector3d velocity_estimate_B =
+        orientation_estimate_B_W.toRotationMatrix() * velocity_estimate_W;
+    // Creating estimated transform message
+    geometry_msgs::TransformStamped estimated_transform;
+    estimated_transform.header = msg->header;
+    tf::vectorEigenToMsg(position_estimate_W,
+                         estimated_transform.transform.translation);
+    tf::quaternionEigenToMsg(orientation_estimate_B_W,
+                             estimated_transform.transform.rotation);
+    // Creating estimated odometry message
+    nav_msgs::Odometry estimated_odometry;
+    estimated_odometry.header = msg->header;
+    estimated_odometry.child_frame_id = object_name_;
+    tf::pointEigenToMsg(position_estimate_W,
+                        estimated_odometry.pose.pose.position);
+    tf::quaternionEigenToMsg(orientation_estimate_B_W,
+                             estimated_odometry.pose.pose.orientation);
+    tf::vectorEigenToMsg(velocity_estimate_B,
+                         estimated_odometry.twist.twist.linear);
+    tf::vectorEigenToMsg(rate_estimate_B,
+                         estimated_odometry.twist.twist.angular);
+    // Publishing the estimates
+    estimated_transform_pub_.publish(estimated_transform);
+    estimated_odometry_pub_.publish(estimated_odometry);
+    // Publishing the estimator intermediate results
+    vicon_odometry_estimator_->publishIntermediateResults(msg->header.stamp);
+  }
 
-    // Raw vicon data callback.
-    void transformStampedCallback(const geometry_msgs::TransformStampedConstPtr& msg)
-    {
-      // Extracting the relavent data from the message
-      Eigen::Vector3d position_measured_W;
-      Eigen::Quaterniond orientation_measured_B_W;
-      tf::vectorMsgToEigen(msg->transform.translation, position_measured_W);
-      tf::quaternionMsgToEigen(msg->transform.rotation, orientation_measured_B_W);
-      // Passing the received data to the estimator
-      vicon_odometry_estimator_->updateEstimate(position_measured_W, orientation_measured_B_W);
-      // Retreiving the estimates
-      Eigen::Vector3d position_estimate_W = vicon_odometry_estimator_->getEstimatedPosition();
-      Eigen::Vector3d velocity_estimate_W = vicon_odometry_estimator_->getEstimatedVelocity();
-      Eigen::Quaterniond orientation_estimate_B_W = vicon_odometry_estimator_->getEstimatedOrientation();
-      Eigen::Vector3d rate_estimate_B = vicon_odometry_estimator_->getEstimatedAngularVelocity();
-      // Rotating the estimated global frame velocity into the body frame.
-      Eigen::Vector3d velocity_estimate_B = orientation_estimate_B_W.toRotationMatrix() * velocity_estimate_W;
-      // Creating estimated transform message
-      geometry_msgs::TransformStamped estimated_transform;
-      estimated_transform.header = msg->header;
-      tf::vectorEigenToMsg(position_estimate_W, estimated_transform.transform.translation);
-      tf::quaternionEigenToMsg(orientation_estimate_B_W, estimated_transform.transform.rotation);
-      // Creating estimated odometry message
-      nav_msgs::Odometry estimated_odometry;
-      estimated_odometry.header = msg->header;
-      estimated_odometry.child_frame_id = object_name_;
-      tf::pointEigenToMsg(position_estimate_W, estimated_odometry.pose.pose.position);
-      tf::quaternionEigenToMsg(orientation_estimate_B_W, estimated_odometry.pose.pose.orientation);
-      tf::vectorEigenToMsg(velocity_estimate_B, estimated_odometry.twist.twist.linear);
-      tf::vectorEigenToMsg(rate_estimate_B, estimated_odometry.twist.twist.angular);
-      // Publishing the estimates
-      estimated_transform_pub_.publish(estimated_transform);
-      estimated_odometry_pub_.publish(estimated_odometry);
-      // Publishing the estimator intermediate results
-      vicon_odometry_estimator_->publishIntermediateResults(msg->header.stamp);
-    }
-
-  private:
-    // Raw vicon data subscriber.
-    ros::Subscriber raw_transform_sub_;
-    // Estimate publishers
-    ros::Publisher estimated_transform_pub_;
-    ros::Publisher estimated_odometry_pub_;
-    // Name of the tracked object
-    std::string object_name_;
-    // Vicon-based estimator
-    std::unique_ptr<vicon_estimator::ViconOdometryEstimator> vicon_odometry_estimator_;
+ private:
+  // Raw vicon data subscriber.
+  ros::Subscriber raw_transform_sub_;
+  // Estimate publishers
+  ros::Publisher estimated_transform_pub_;
+  ros::Publisher estimated_odometry_pub_;
+  // Name of the tracked object
+  std::string object_name_;
+  // Vicon-based estimator
+  std::unique_ptr<vicon_estimator::ViconOdometryEstimator>
+      vicon_odometry_estimator_;
 };
 
 // Standard C++ entry point
-int main(int argc, char** argv)
-{
+int main(int argc, char** argv) {
   // Announce this program to the ROS master
   ros::init(argc, argv, "vicon_estimator");
 
@@ -121,7 +134,8 @@ int main(int argc, char** argv)
   vicon_odometry_estimator.reset();
 
   // Creating a Vicon Data Listener to direct vicon data to the estimator
-  ViconDataListener vicon_data_listener(nh, nh_private, &vicon_odometry_estimator);
+  ViconDataListener vicon_data_listener(nh, nh_private,
+                                        &vicon_odometry_estimator);
 
   // Spinng forever pumping callbacks
   ros::spin();

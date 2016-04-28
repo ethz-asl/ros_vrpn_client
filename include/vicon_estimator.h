@@ -105,6 +105,10 @@ class TranslationalEstimator {
   // Estimates
   Eigen::Vector3d position_estimate_W_;
   Eigen::Vector3d velocity_estimate_W_;
+
+  // Last measurement
+  double last_timestamp_;
+  bool first_measurement_flag_;
 };
 
 // The parameter class for the translational estimator and parameter default
@@ -198,7 +202,8 @@ class RotationalEstimator {
   // Constructor
   RotationalEstimator();
   // Update estimated quantities with new measurement
-  void updateEstimate(const Eigen::Quaterniond& orientation_measured_B_W, double timestamp);
+  void updateEstimate(const Eigen::Quaterniond& orientation_measured_B_W,
+                      double timestamp);
   // Reset the estimator
   void reset();
   // Setting the estimator parameters
@@ -238,17 +243,17 @@ class RotationalEstimator {
   // Serial of functions performing the estimate update steps
   void updateEstimatePropagateGlobalEstimate(
       const Eigen::Matrix<double, 7, 1>& x_old,
-      Eigen::Matrix<double, 7, 1>* x_priori);
+      Eigen::Matrix<double, 7, 1>* x_priori, double dt);
 
   void updateEstimatePropagateErrorEstimate(
       const Eigen::Matrix<double, 6, 1>& dx_old,
       const Eigen::Matrix<double, 7, 1>& x_old,
-      Eigen::Matrix<double, 6, 1>* dx_priori);
+      Eigen::Matrix<double, 6, 1>* dx_priori, double dt);
 
   void updateEstimatePropagateErrorCovariance(
       Eigen::Matrix<double, 6, 6>& cov_old,
       const Eigen::Matrix<double, 7, 1>& x_old,
-      Eigen::Matrix<double, 6, 6>* covariance_priori);
+      Eigen::Matrix<double, 6, 6>* covariance_priori, double dt);
 
   void updateEstimateUpdateErrorEstimate(
       const Eigen::Quaterniond& orientation_measured,

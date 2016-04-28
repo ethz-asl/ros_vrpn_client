@@ -91,7 +91,7 @@ class TranslationalEstimator
   // Constructor
   TranslationalEstimator();
   // Update estimated quantities with new measurement
-  void updateEstimate(const Eigen::Vector3d& pos_measured);
+  void updateEstimate(const Eigen::Vector3d& pos_measured, double timestamp);
   // Reset the estimator
   void reset();
   // Setting the estimator parameters
@@ -119,17 +119,18 @@ class TranslationalEstimator
 };
 
 // The parameter class for the translational estimator and parameter default values
-static const double kDefaultdOrientationEstimateInitialCovariance = 1;
-static const double kDefaultdRateEstimateInitialCovariance = 1;
+static const double kDefaultLastTimestamp = -1.0;
+static const double kDefaultdOrientationEstimateInitialCovariance = 1.0;
+static const double kDefaultdRateEstimateInitialCovariance = 1.0;
 static const double kDefaultdOrientationProcessCovariance = 0.01;
-static const double kDefaultdRateProcessCovariance = 1;
+static const double kDefaultdRateProcessCovariance = 1.0;
 static const double kDefaultOrientationMeasurementCovariance = 0.0005;
 static const Eigen::Quaterniond kDefaultInitialOrientationEstimate = Eigen::Quaterniond::Identity();
 static const Eigen::Vector3d kDefaultInitialRateEstimate = Eigen::Vector3d::Zero();
 static const Eigen::Vector3d kDefaultInitialDorientationEstimate = Eigen::Vector3d::Zero();
 static const Eigen::Vector3d kDefaultInitialDrateEstimate = Eigen::Vector3d::Zero();
 static const double kDefaultOutlierThresholdDegrees = 30.0;
-static const int kDefaultMaximumOutlierCount = 10;
+static const int kDefaultMaximumOutlierCount = 10.0;
 static const bool kOutputMinimalQuaternions = false;
 
 class RotationalEstimatorParameters
@@ -214,7 +215,7 @@ class RotationalEstimator
   // Constructor
   RotationalEstimator();
   // Update estimated quantities with new measurement
-  void updateEstimate(const Eigen::Quaterniond& orientation_measured_B_W);
+  void updateEstimate(const Eigen::Quaterniond& orientation_measured_B_W, double timestamp);
   // Reset the estimator
   void reset();
   // Setting the estimator parameters
@@ -245,6 +246,7 @@ class RotationalEstimator
   Eigen::Matrix<double, 4, 4> measurement_covariance_;
 
   // Last measurement
+  double last_timestamp_;
   Eigen::Quaterniond orientation_measured_old_;
   bool first_measurement_flag_;
   int outlier_counter_;
@@ -291,7 +293,8 @@ class ViconEstimator
 
   // Update estimated quantities with new measurement
   void updateEstimate(const Eigen::Vector3d& position_measured_W,
-                      const Eigen::Quaterniond& orientation_measured_B_W);
+                      const Eigen::Quaterniond& orientation_measured_B_W,
+                      double timestamp);
   // Reset the estimator
   void reset();
   // Set estimator parameters

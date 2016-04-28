@@ -41,11 +41,12 @@ ViconEstimator::ViconEstimator()
 }
 
 void ViconEstimator::updateEstimate(const Eigen::Vector3d& position_measured_W,
-                                    const Eigen::Quaterniond& orientation_measured_B_W)
+                                    const Eigen::Quaterniond& orientation_measured_B_W,
+                                    double timestamp)
 {
   // Updating the translational and rotation sub-estimates
-  translational_estimator_.updateEstimate(position_measured_W);
-  rotational_estimator_.updateEstimate(orientation_measured_B_W);
+  translational_estimator_.updateEstimate(position_measured_W, timestamp);
+  rotational_estimator_.updateEstimate(orientation_measured_B_W, timestamp);
 }
 
 void ViconEstimator::reset()
@@ -85,7 +86,7 @@ TranslationalEstimator::TranslationalEstimator()
   reset();
 }
 
-void TranslationalEstimator::updateEstimate(const Eigen::Vector3d& pos_measured_W)
+void TranslationalEstimator::updateEstimate(const Eigen::Vector3d& pos_measured_W, double timestamp)
 {
   // Saving the measurement to the intermediate results
   estimator_results_.position_measured_ = pos_measured_W;
@@ -165,6 +166,7 @@ void RotationalEstimator::reset()
   measurement_covariance_
       << estimator_parameters_.orientation_measurement_covariance_ * Eigen::Matrix4d::Identity();
   // Setting the old measurement to the intial position estimate
+  last_timestamp_ = -1.0;
   orientation_measured_old_ = estimator_parameters_.initial_orientation_estimate_;
   first_measurement_flag_ = true;
   outlier_counter_ = 0;
@@ -194,7 +196,7 @@ Eigen::Vector3d RotationalEstimator::getEstimatedRate() const
 }
 
 
-void RotationalEstimator::updateEstimate(const Eigen::Quaterniond& orientation_measured_B_W)
+void RotationalEstimator::updateEstimate(const Eigen::Quaterniond& orientation_measured_B_W, double timestamp)
 {
   // Writing the raw measurement to the intermediate results structure
   estimator_results_.orientation_measured_ = orientation_measured_B_W;
@@ -202,6 +204,11 @@ void RotationalEstimator::updateEstimate(const Eigen::Quaterniond& orientation_m
   // Writing the old estimate to the intermediate results structure
   estimator_results_.orientation_old_ = orientation_estimate_B_W_;
   estimator_results_.rate_old_ = rate_estimate_B_;
+
+  // Calculating the time difference to the last measurement
+  double dt = timestamp - last_timestamp_;
+  last_timestamp_ = timestamp;
+  std::cout << "dt: " << dt << std::endl;
 
   // Detecting outlier measurements
   bool measurement_update_flag;

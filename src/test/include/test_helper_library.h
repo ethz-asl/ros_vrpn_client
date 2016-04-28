@@ -28,9 +28,12 @@
 
 void euler2quat(double roll, double pitch, double yaw, double* q);
 
-void calculate3dRmsError(double truth[][3], double est[][3], const int trajectory_length, const int start_index, double* error);
+void calculate3dRmsError(double truth[][3], double est[][3],
+                         const int trajectory_length, const int start_index,
+                         double* error);
 
-void calculateQuaternionRmsError(double truth[][4], double est[][4], const int trajectory_length, const int start_index, double* error);
+void calculateQuaternionRmsError(double truth[][4], double est[][4],
+                                 const int trajectory_length,
+                                 const int start_index, double* error);
 
-
-#endif // TEST_HELPER_LIBRARY_H
+#endif  // TEST_HELPER_LIBRARY_H

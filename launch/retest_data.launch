@@ -31,7 +31,7 @@
     </node>
 
     <node name="rosbag_record" type="record" pkg="rosbag" output="screen"
-      args=" -o /home/millanea/trunk/vicon_odometry/vrpn_client_fault_finding/output/ /$(arg mav_name)/vicon_estimator/estimated_odometry /$(arg mav_name)//vicon_estimator/estimated_transform /$(arg mav_name)/vicon_estimator/vicon_intermediate_results /$(arg mav_name)/vrpn_client/raw_transform">
+      args=" -o /home/millanea/trunk/vicon_odometry/vrpn_client_fault_finding/output/ /$(arg mav_name)/vicon_estimator/estimated_odometry /$(arg mav_name)/vicon_estimator/estimated_transform /$(arg mav_name)/vicon_estimator/vicon_intermediate_results /$(arg mav_name)/vrpn_client/raw_transform">
     </node>
 
   </group>

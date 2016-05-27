@@ -121,6 +121,9 @@ void ViconOdometryEstimator::publishIntermediateResults(ros::Time timestamp) {
       rotational_estimator_results.measurement_flip_flag_;
   tf::quaternionEigenToMsg(rotational_estimator_results.q_Z_Z1_, msg.q_Z_Z1);
   tf::quaternionEigenToMsg(rotational_estimator_results.q_Z_B_, msg.q_Z_B);
+  msg.q_Z_Z1_magnitude.data = rotational_estimator_results.q_Z_Z1_magnitude_;
+  msg.q_Z_B_mahalanobis_distance.data = rotational_estimator_results.q_Z_B_mahalanobis_distance_;
+  msg.q_covariance_trace.data = rotational_estimator_results.q_covariance_trace_;
 
   // Publishing estimator message
   publisher_.publish(msg);

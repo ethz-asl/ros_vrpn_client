@@ -508,26 +508,43 @@ bool RotationalEstimator::detectMeasurementOutlier(
 
   // Constructing the quaternion representing the rotation between subsquent
   // measurements
-  Eigen::Quaterniond q_Z_Z1_ =
+  Eigen::Quaterniond q_Z_Z1 =
       orientation_measured * orientation_measured_old_.inverse();
   // Calculating the quaternion magnitude
-  double q_Z_Z1_magnitude_ = quaternionRotationMagnitude(q_Z_Z1_);
+  double q_Z_Z1_magnitude = quaternionRotationMagnitude(q_Z_Z1);
 
   // Constructing the quaternion representing the rotation between the body a
   // measurement
-  Eigen::Quaterniond q_Z_B_ =
+  Eigen::Quaterniond q_Z_B =
       orientation_measured * orientation_estimate_B_W_.inverse();
   // Calculating the quaternion magnitude
-  double q_Z_B_magnitude_ = quaternionRotationMagnitude(q_Z_B_);
+  double q_Z_B_magnitude = quaternionRotationMagnitude(q_Z_B);
+
+  // WORK IN PROGRESS
+  // CALCULATING THE MALHALANOBIS DISTANCE
+  Eigen::Vector3d dq_Z_B_ = q_Z_B.vec();
+  Eigen::Matrix<double, 3, 3> dq_covariance = covariance_.block<3, 3>(0, 0);
+  double q_Z_B_mahalanobis_distance = sqrt( dq_Z_B_.transpose() * dq_covariance.inverse() * dq_Z_B_);
+
+  // CALCULATING COVARIANCE ON THE QUATERNION ESTIMATE
+  double q_covariance_trace = dq_covariance.trace();
+
+
+  // UP TO HERE. 
+  // THE MAHALANOBIS DISTNACE GOES TO NaN WHEN COVARIANCE GOES UP SLIGHTLY.
+  // WRITE THE VECTORS TO MATLAB AND CHECK WHAT IS HAPPENING THERE.
 
   // Writing the error quaternions and their magnitude to the intermediate
   // results structure
-  estimator_results_.q_Z_Z1_ = q_Z_Z1_;
-  estimator_results_.q_Z_B_ = q_Z_B_;
+  estimator_results_.q_Z_Z1_ = q_Z_Z1;
+  estimator_results_.q_Z_B_ = q_Z_B;
+  estimator_results_.q_Z_Z1_magnitude_ = q_Z_Z1_magnitude;
+  estimator_results_.q_Z_B_mahalanobis_distance_ = q_Z_B_mahalanobis_distance;
+  estimator_results_.q_covariance_trace_ = q_covariance_trace;
 
   // Detecting if the measurement is an outlier
   bool measurement_outlier_flag =
-      q_Z_Z1_magnitude_ >=
+      q_Z_Z1_magnitude >=
       estimator_parameters_.outlier_threshold_degrees_ * M_PI / 180.0;
 
   // After a certain number of measurements have been ignored in a row

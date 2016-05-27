@@ -17,3 +17,7 @@ std_msgs/Bool             measurement_flip_flag  # flag indicating if the measur
 
 geometry_msgs/Quaternion  q_Z_Z1                 # the quaternion representing the rotation between subsequent measurements
 geometry_msgs/Quaternion  q_Z_B                  # the quaternion representing the rotation between measurement and body
+
+std_msgs/Float64 		  q_Z_Z1_magnitude
+std_msgs/Float64 		  q_Z_B_mahalanobis_distance
+std_msgs/Float64 		  q_covariance_trace

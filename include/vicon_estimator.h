@@ -113,8 +113,8 @@ class TranslationalEstimator {
 
   // Last measurement
   Eigen::Vector3d pos_measured_old_;
-  bool first_measurement_flag_;
-  int outlier_counter_;
+  bool first_measurement_flag_translation_;
+  int outlier_counter_translation_;
 
   // Estimates
   Eigen::Vector3d position_estimate_W_;
@@ -246,8 +246,8 @@ class RotationalEstimator {
 
   // Last measurement
   Eigen::Quaterniond orientation_measured_old_;
-  bool first_measurement_flag_;
-  int outlier_counter_;
+  bool first_measurement_flag_rotation_;
+  int outlier_counter_rotation_;
 
   // Function to generate a skew symmetric matrix from a vector
   Eigen::Matrix3d skewMatrix(const Eigen::Vector3d& vec) const;

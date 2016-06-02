@@ -121,6 +121,79 @@ void TranslationalEstimator::setParameters(
   estimator_parameters_ = estimator_parameters;
 }
 
+bool TranslationalEstimator::detectTranslationalMeasurementOutlier(
+    const Eigen::Vector3d& pos_measured) {
+  /*
+   *  Method 1 - Detecting the error between the current estimate and the
+   *measurement.
+   *
+   *             Here we compute the rotation between the state estimate and the
+   *current
+   *             measurement. If the magnitude of this rotation is too large we
+   *deem the
+   *             the measurement an outlier and disgard it.
+   *
+   *             The problem with this method is that at initialization the
+   *estimated
+   *             state and measurement can be legitimate different very
+   *different.
+   *             TODO(millanea): The solution to this problem, and probably the
+   *correct way
+   *             to approach this outlier rejection problem, is to compute the
+   *likelihood of
+   *             the measurement given the current estimate of the state and its
+   *variance.
+   */
+  // Constructing the quaternion representing the body to measurement rotation
+  // Eigen::Quaterniond rotation_Z_W = orientation_measured *
+  // orientation_estimate_B_W_.inverse();
+  // Calculating a measure of the size of the error quaternion
+  // double rotation_magnitude_radians =
+  // quaternionRotationMagnitude(rotation_Z_W);
+  /*
+   *  Method 2 - Detecting the error between subsequent measurements.
+   *
+   *             Here we compute the rotation between the current measurement
+   *and the measurement
+   *             from the last time step. If the magnitude of this rotation is
+   *too large we deem the
+   *             the measurement an outlier and disgard it.
+   */
+  // Performing some initialization if this is the first measurement.
+  // Assuming first measurement valid, saving it and returning.
+  if (first_measurement_flag_) {
+    first_measurement_flag_ = false;
+    pos_measured_old_ = pos_measured;
+    return false;
+  }
+
+
+  // Detecting if the measurement is an outlier
+  bool measurement_outlier_flag =
+      q_Z_Z1_magnitude_ >=
+      estimator_parameters_.outlier_threshold_cm_ * M_PI / 180.0;
+
+  // After a certain number of measurements have been ignored in a row
+  // we assume we've made a mistake and accept the measurement as valid.
+  if (outlier_counter_ >= estimator_parameters_.maximum_outlier_count_translation_) {
+    measurement_outlier_flag = false;
+  }
+
+  // Saving the flag to the intermediate results structure
+  estimator_results_.measurement_translational_outlier_flag_ = measurement_outlier_flag;
+
+  // If rotation too great indicate that measurement is corrupted
+  if (measurement_outlier_flag) {
+    ++outlier_counter_;
+    return true;
+  } else {
+    // If measurement valid. Overwriting the old measurement.
+    pos_measured_old_ = pos_measured;
+    outlier_counter_ = 0;
+    return false;
+  }
+}
+
 /*
  * --------------------------------------------------------------------
  * Rotational Estimator
@@ -197,7 +270,7 @@ void RotationalEstimator::updateEstimate(
 
   // Detecting outlier measurements
   bool measurement_update_flag;
-  if (detectMeasurementOutlier(orientation_measured_B_W)) {
+  if (detectRotationalMeasurementOutlier(orientation_measured_B_W)) {
     measurement_update_flag = false;
   } else {
     measurement_update_flag = true;
@@ -442,7 +515,7 @@ void RotationalEstimator::updateEstimateRecombineErrorGlobal(
   *dx_measurement = Eigen::Matrix<double, 6, 1>::Zero();
 }
 
-bool RotationalEstimator::detectMeasurementOutlier(
+bool RotationalEstimator::detectRotationalMeasurementOutlier(
     const Eigen::Quaterniond& orientation_measured) {
   /*
    *  Method 1 - Detecting the error between the current estimate and the
@@ -514,12 +587,12 @@ bool RotationalEstimator::detectMeasurementOutlier(
 
   // After a certain number of measurements have been ignored in a row
   // we assume we've made a mistake and accept the measurement as valid.
-  if (outlier_counter_ >= estimator_parameters_.maximum_outlier_count_) {
+  if (outlier_counter_ >= estimator_parameters_.maximum_rotation_outlier_count_) {
     measurement_outlier_flag = false;
   }
 
   // Saving the flag to the intermediate results structure
-  estimator_results_.measurement_outlier_flag_ = measurement_outlier_flag;
+  estimator_results_.measurement_rotational_outlier_flag_ = measurement_outlier_flag;
 
   // If rotation too great indicate that measurement is corrupted
   if (measurement_outlier_flag) {

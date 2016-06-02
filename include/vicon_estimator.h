@@ -33,6 +33,9 @@ static const double kDefaultDt = 0.01;
 // values
 static const double kDefaultTranslationalKp = 1.0;
 static const double kDefaultTranslationalKv = 10.0;
+static const double kDefaultOutlierThresholdCM = 10.0;
+static const int kDefaultMaximumOutlierCountTranslation = 10;
+
 static const Eigen::Vector3d kDefaultInitialPositionEstimate =
     Eigen::Vector3d::Zero();
 static const Eigen::Vector3d kDefaultInitialVelocityEstimate =
@@ -46,12 +49,17 @@ class TranslationalEstimatorParameters {
       : dt_(kDefaultDt),
         kp_(kDefaultTranslationalKp),
         kv_(kDefaultTranslationalKv),
+        outlier_threshold_cm_(kDefaultOutlierThresholdCM),
+        maximum_outlier_count_translation_(kDefaultMaximumOutlierCountTranslation),
         initial_position_estimate_(kDefaultInitialPositionEstimate),
         initial_velocity_estimate_(kDefaultInitialVelocityEstimate) {}
 
   double dt_;
   double kp_;
   double kv_;
+  double outlier_threshold_cm_;
+  int maximum_outlier_count_translation_;
+  static const int kDefaultMaximumOutlierCountTranslation;
   Eigen::Vector3d initial_position_estimate_;
   Eigen::Vector3d initial_velocity_estimate_;
 };
@@ -66,13 +74,14 @@ class TranslationalEstimatorResults {
         velocity_old_(Eigen::Vector3d::Zero()),
         position_estimate_(Eigen::Vector3d::Zero()),
         velocity_estimate_(Eigen::Vector3d::Zero()) {}
-
   // Intermediate Estimator results
   Eigen::Vector3d position_measured_;
   Eigen::Vector3d position_old_;
   Eigen::Vector3d velocity_old_;
   Eigen::Vector3d position_estimate_;
   Eigen::Vector3d velocity_estimate_;
+  bool measurement_translational_outlier_flag_;
+
 };
 
 // Estimated object position and velocity from vicon data
@@ -82,7 +91,7 @@ class TranslationalEstimator {
   // Constructor
   TranslationalEstimator();
   // Update estimated quantities with new measurement
-  void updateEstimate(const Eigen::Vector3d& pos_measured);
+  void updateEstimate(const Eigen::Vector3d& pos_measured_W);
   // Reset the estimator
   void reset();
   // Setting the estimator parameters
@@ -102,9 +111,18 @@ class TranslationalEstimator {
   TranslationalEstimatorParameters estimator_parameters_;
   TranslationalEstimatorResults estimator_results_;
 
+  // Last measurement
+  Eigen::Vector3d pos_measured_old_;
+  bool first_measurement_flag_;
+  int outlier_counter_;
+
   // Estimates
   Eigen::Vector3d position_estimate_W_;
   Eigen::Vector3d velocity_estimate_W_;
+
+  // Detects if the passed measurement is an outlier
+  bool detectTranslationalMeasurementOutlier(const Eigen::Vector3d& pos_measured);
+
 };
 
 // The parameter class for the translational estimator and parameter default
@@ -123,7 +141,7 @@ static const Eigen::Vector3d kDefaultInitialDorientationEstimate =
 static const Eigen::Vector3d kDefaultInitialDrateEstimate =
     Eigen::Vector3d::Zero();
 static const double kDefaultOutlierThresholdDegrees = 30.0;
-static const int kDefaultMaximumOutlierCount = 10;
+static const int kDefaultMaximumOutlierCountRotation = 10;
 static const bool kOutputMinimalQuaternions = false;
 
 class RotationalEstimatorParameters {
@@ -145,7 +163,7 @@ class RotationalEstimatorParameters {
         initial_dorientation_estimate_(kDefaultInitialDorientationEstimate),
         initial_drate_estimate_(kDefaultInitialDrateEstimate),
         outlier_threshold_degrees_(kDefaultOutlierThresholdDegrees),
-        maximum_outlier_count_(kDefaultMaximumOutlierCount),
+        maximum_outlier_count_rotation_(kDefaultMaximumOutlierCountRotation),
         output_minimal_quaternions_(kOutputMinimalQuaternions){};
 
   double dt_;
@@ -159,7 +177,7 @@ class RotationalEstimatorParameters {
   Eigen::Vector3d initial_dorientation_estimate_;
   Eigen::Vector3d initial_drate_estimate_;
   double outlier_threshold_degrees_;
-  int maximum_outlier_count_;
+  int maximum_outlier_count_rotation_;
   bool output_minimal_quaternions_;
 };
 
@@ -173,7 +191,7 @@ class RotationalEstimatorResults {
         rate_old_(Eigen::Vector3d::Zero()),
         orientation_estimate_(Eigen::Quaterniond::Identity()),
         rate_estimate_(Eigen::Vector3d::Zero()),
-        measurement_outlier_flag_(false),
+        measurement_rotational_outlier_flag_(false),
         measurement_flip_flag_(false),
         q_Z_Z1_(Eigen::Quaterniond::Identity()),
         q_Z_B_(Eigen::Quaterniond::Identity()){};
@@ -184,7 +202,7 @@ class RotationalEstimatorResults {
   Eigen::Vector3d rate_old_;
   Eigen::Quaterniond orientation_estimate_;
   Eigen::Vector3d rate_estimate_;
-  bool measurement_outlier_flag_;
+  bool measurement_rotational_outlier_flag_;
   bool measurement_flip_flag_;
   Eigen::Quaterniond q_Z_Z1_;
   Eigen::Quaterniond q_Z_B_;
@@ -262,7 +280,7 @@ class RotationalEstimator {
       Eigen::Matrix<double, 6, 1>* dx_measurement);
 
   // Detects if the passed measurement is an outlier
-  bool detectMeasurementOutlier(const Eigen::Quaterniond& orientation_measured);
+  bool detectRotationalMeasurementOutlier(const Eigen::Quaterniond& orientation_measured);
   // Returns the magnitude of the rotation represented by a quaternion
   double quaternionRotationMagnitude(const Eigen::Quaterniond& rotation);
 };

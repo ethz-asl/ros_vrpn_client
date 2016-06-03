@@ -86,6 +86,10 @@ void TranslationalEstimator::updateEstimate(
     } else {
       measurement_update_flag = true;
     }
+
+
+    // If no outlier detected do measurement update
+    if (measurement_update_flag) {
   // Saving the measurement to the intermediate results
   estimator_results_.position_measured_ = pos_measured_W;
   // Saving the old state to the intermediate results
@@ -116,6 +120,15 @@ void TranslationalEstimator::updateEstimate(
   // Saving estimate to intermediate results
   estimator_results_.position_estimate_ = position_estimate_W_;
   estimator_results_.velocity_estimate_ = velocity_estimate_W_;
+    }// If outlier detected just write priori estimate to posteriori
+      else {
+        // Global state correction (combining priori global state estimate with
+        // priori error state estimate)
+        estimator_results_.position_estimate_ = estimator_results_.position_old_;
+          estimator_results_.velocity_estimate_ = estimator_results_.velocity_old_;
+
+      }
+
 }
 
 void TranslationalEstimator::reset() {

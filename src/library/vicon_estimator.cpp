@@ -78,6 +78,14 @@ TranslationalEstimator::TranslationalEstimator()
 
 void TranslationalEstimator::updateEstimate(
     const Eigen::Vector3d& pos_measured_W) {
+
+  // Detecting outlier measurements
+    bool measurement_update_flag;
+    if (detectTranslationalMeasurementOutlier(pos_measured_W)) {
+      measurement_update_flag = false;
+    } else {
+      measurement_update_flag = true;
+    }
   // Saving the measurement to the intermediate results
   estimator_results_.position_measured_ = pos_measured_W;
   // Saving the old state to the intermediate results
@@ -112,6 +120,7 @@ void TranslationalEstimator::updateEstimate(
 
 void TranslationalEstimator::reset() {
   // Resetting the estimates to their initial values
+
   position_estimate_W_ = estimator_parameters_.initial_position_estimate_;
   velocity_estimate_W_ = estimator_parameters_.initial_velocity_estimate_;
 }
@@ -132,11 +141,11 @@ bool TranslationalEstimator::detectTranslationalMeasurementOutlier(
     return false;
   }
 
-  //Compare new measurement with old masuerement
-
+  //Compare new measurement with old measuerement and constructing error vector
+  Eigen::Vector3d error = (pos_measured_old_ - pos_measured);
   // Detecting if the measurement is an outlier
   bool measurement_outlier_flag =
-      ((q_Z_Z1_magnitude_ >= estimator_parameters_.outlier_threshold_cm_)|(>=estimator_parameters_.outlier_threshold_cm_)|(>=estimator_parameters_.outlier_threshold_cm_));
+      (error.norm()>=estimator_parameters_.outlier_threshold_m_);
 
   // After a certain number of measurements have been ignored in a row
   // we assume we've made a mistake and accept the measurement as valid.

@@ -33,7 +33,7 @@ static const double kDefaultDt = 0.01;
 // values
 static const double kDefaultTranslationalKp = 1.0;
 static const double kDefaultTranslationalKv = 10.0;
-static const double kDefaultOutlierThresholdCM = 10.0;
+static const double kDefaultOutlierThresholdM = 0.5;
 static const int kDefaultMaximumOutlierCountTranslation = 10;
 
 static const Eigen::Vector3d kDefaultInitialPositionEstimate =
@@ -49,7 +49,7 @@ class TranslationalEstimatorParameters {
       : dt_(kDefaultDt),
         kp_(kDefaultTranslationalKp),
         kv_(kDefaultTranslationalKv),
-        outlier_threshold_cm_(kDefaultOutlierThresholdCM),
+        outlier_threshold_m_(kDefaultOutlierThresholdM),
         maximum_outlier_count_translation_(kDefaultMaximumOutlierCountTranslation),
         initial_position_estimate_(kDefaultInitialPositionEstimate),
         initial_velocity_estimate_(kDefaultInitialVelocityEstimate) {}
@@ -57,9 +57,8 @@ class TranslationalEstimatorParameters {
   double dt_;
   double kp_;
   double kv_;
-  double outlier_threshold_cm_;
+  double outlier_threshold_m_;
   int maximum_outlier_count_translation_;
-  static const int kDefaultMaximumOutlierCountTranslation;
   Eigen::Vector3d initial_position_estimate_;
   Eigen::Vector3d initial_velocity_estimate_;
 };

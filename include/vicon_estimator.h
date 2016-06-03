@@ -72,15 +72,16 @@ class TranslationalEstimatorResults {
       : position_measured_(Eigen::Vector3d::Zero()),
         position_old_(Eigen::Vector3d::Zero()),
         velocity_old_(Eigen::Vector3d::Zero()),
+        measurement_translational_outlier_flag_(false),
         position_estimate_(Eigen::Vector3d::Zero()),
         velocity_estimate_(Eigen::Vector3d::Zero()) {}
   // Intermediate Estimator results
   Eigen::Vector3d position_measured_;
   Eigen::Vector3d position_old_;
   Eigen::Vector3d velocity_old_;
+  bool measurement_translational_outlier_flag_;
   Eigen::Vector3d position_estimate_;
   Eigen::Vector3d velocity_estimate_;
-  bool measurement_translational_outlier_flag_;
 
 };
 

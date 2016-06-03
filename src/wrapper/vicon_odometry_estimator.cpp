@@ -57,10 +57,41 @@ void ViconOdometryEstimator::initializeParameters(ros::NodeHandle& nh) {
   nh.getParam(
       "rotational_estimator/orientation_measurementCovariance",
       rotationalEstimatorParameters.orientation_measurement_covariance_);
-  nh.getParam("rotational_estimator/outlier_threshold_degrees",
-              rotationalEstimatorParameters.outlier_threshold_degrees_);
-  nh.getParam("rotational_estimator/maximum_outlier_count",
-              rotationalEstimatorParameters.maximum_outlier_count_);
+
+  // Getting outlier rejection type
+  std::string outlier_rejection_method_string;
+  nh.getParam("rotational_estimator/outlier_rejection_method",
+              outlier_rejection_method_string);
+
+  std::cout << "outlier_rejection_method_string"
+            << outlier_rejection_method_string << std::endl
+            << std::endl;
+
+  if (!outlier_rejection_method_string.compare("mahalanobis_distance")) {
+    rotationalEstimatorParameters.outlier_rejection_method_ =
+        MAHALANOBIS_DISTANCE;
+    std::cout << "mahalanobis_distance" << std::endl << std::endl;
+  } else if (!outlier_rejection_method_string.compare(
+                 "subsequent_measurements")) {
+    rotationalEstimatorParameters.outlier_rejection_method_ =
+        SUBSEQUENT_MEASUREMENTS;
+    std::cout << "subsequent_measurements" << std::endl << std::endl;
+  } else {
+    ROS_WARN_STREAM("Outlier rejection method requested ("
+                    << outlier_rejection_method_string
+                    << ") Not recognized. Please select one of "
+                       "\"mahalanobis_distance\", \"subsequent_measurements\". "
+                       "Using default value.");
+  }
+
+  nh.getParam("rotational_estimator/outlier_rejection_mahalanobis_threshold",
+              rotationalEstimatorParameters.outlier_rejection_mahalanobis_threshold_);
+
+  nh.getParam("rotational_estimator/outlier_rejection_subsequent_threshold_degrees",
+              rotationalEstimatorParameters.outlier_rejection_subsequent_threshold_degrees_);
+  nh.getParam("rotational_estimator/outlier_rejection_subsequent_maximum_count",
+              rotationalEstimatorParameters.outlier_rejection_subsequent_maximum_count_);
+
   nh.getParam("rotational_estimator/output_minimal_quaternions",
               rotationalEstimatorParameters.output_minimal_quaternions_);
 
@@ -119,11 +150,25 @@ void ViconOdometryEstimator::publishIntermediateResults(ros::Time timestamp) {
       rotational_estimator_results.measurement_outlier_flag_;
   msg.measurement_flip_flag.data =
       rotational_estimator_results.measurement_flip_flag_;
-  tf::quaternionEigenToMsg(rotational_estimator_results.q_Z_Z1_, msg.q_Z_Z1);
-  tf::quaternionEigenToMsg(rotational_estimator_results.q_Z_B_, msg.q_Z_B);
   msg.q_Z_Z1_magnitude.data = rotational_estimator_results.q_Z_Z1_magnitude_;
-  msg.q_Z_B_mahalanobis_distance.data = rotational_estimator_results.q_Z_B_mahalanobis_distance_;
-  msg.q_covariance_trace.data = rotational_estimator_results.q_covariance_trace_;
+  msg.q_Z_B_mahalanobis_distance.data =
+      rotational_estimator_results.q_Z_B_mahalanobis_distance_;
+  msg.q_covariance_trace.data =
+      rotational_estimator_results.q_covariance_trace_;
+
+  // Writing the covariance matrix
+  msg.covariance.layout.dim.push_back(std_msgs::MultiArrayDimension());
+  msg.covariance.layout.dim[0].size = 6;
+  msg.covariance.layout.dim[0].stride = 36;
+  msg.covariance.layout.dim[0].label = "cov_x";
+  msg.covariance.layout.dim.push_back(std_msgs::MultiArrayDimension());
+  msg.covariance.layout.dim[1].size = 6;
+  msg.covariance.layout.dim[1].stride = 1;
+  msg.covariance.layout.dim[1].label = "cov_y";
+  msg.covariance.data =
+      std::vector<double>(rotational_estimator_results.covariance_.data(),
+                          rotational_estimator_results.covariance_.data() +
+                              rotational_estimator_results.covariance_.size());
 
   // Publishing estimator message
   publisher_.publish(msg);
@@ -131,13 +176,11 @@ void ViconOdometryEstimator::publishIntermediateResults(ros::Time timestamp) {
 
 void ViconOdometryEstimator::updateEstimate(
     const Eigen::Vector3d& position_measured_W,
-    const Eigen::Quaterniond& orientation_measured_B_W,
-    ros::Time timestamp) {
+    const Eigen::Quaterniond& orientation_measured_B_W, ros::Time timestamp) {
   // Converting the ros time stamp to double
   double timestamp_double = timestamp.toSec();
   // Updating the estimates
   vicon_estimator_.updateEstimate(position_measured_W, orientation_measured_B_W,
                                   timestamp_double);
 }
-
 }

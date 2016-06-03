@@ -8,7 +8,7 @@
 
     <!-- Playing back the data -->
     <node name="rosbag_play" type="play" pkg="rosbag" output="screen"
-      args=" -q /home/millanea/trunk/vicon_odometry/vrpn_client_fault_finding/data/2016/velocity_check.bag">
+      args=" --start=100 /home/millanea/trunk/vicon_odometry/vrpn_client_fault_finding/data/2016/velocity_check.bag">
       <remap from="vrpn_client/estimated_transform" to="disused1" />  
       <remap from="vrpn_client/estimated_odometry" to="disused2" />  
       <remap from="vrpn_client/vicon_intermediate_results" to="disused3" />  
@@ -20,13 +20,21 @@
       <param name="vicon_estimator/dt" value="0.01" />
       <param name="translational_estimator/kp" value="1.0" />
       <param name="translational_estimator/kv" value="0.1" />
-      <param name="rotational_estimator/orientation_estimate_initial_covariance" value="1" />
-      <param name="rotational_estimator/rate_estimate_initial_covariance" value="1" />
+      <param name="rotational_estimator/orientation_estimate_initial_covariance" value="1.0" />
+      <param name="rotational_estimator/rate_estimate_initial_covariance" value="1.0" />
       <param name="rotational_estimator/orientation_process_covariance" value="0.00001" />
-      <param name="rotational_estimator/rate_process_covariance" value="10" />
+      <param name="rotational_estimator/rate_process_covariance" value="10.0" />
       <param name="rotational_estimator/orientation_measurementCovariance" value="0.005" />
-      <param name="rotational_estimator/outlier_threshold_degrees" value="30" />
-      <param name="rotational_estimator/maximum_outlier_count" value="50" />
+
+<!--       <param name="rotational_estimator/outlier_rejection_method" value="mahalanobis_distance" /> -->
+
+     <param name="rotational_estimator/outlier_rejection_method" value="subsequent_measurements" />
+
+      <param name="rotational_estimator/outlier_rejection_mahalanobis_threshold" value="5.0" />
+
+      <param name="rotational_estimator/outlier_rejection_subsequent_threshold_degrees" value="30.0" />
+      <param name="rotational_estimator/outlier_rejection_subsequent_maximum_count" value="50.0" />
+
       <param name="rotational_estimator/output_minimal_quaternions" value="false" />
     </node>
 

@@ -111,6 +111,8 @@ class TranslationalEstimator {
   bool first_measurement_flag_;
 };
 
+enum OutlierRejectionMethod { MAHALANOBIS_DISTANCE, SUBSEQUENT_MEASUREMENTS };
+
 // The parameter class for the translational estimator and parameter default
 // values
 static const double kDefaultLastTimestamp = -1.0;
@@ -127,8 +129,14 @@ static const Eigen::Vector3d kDefaultInitialDorientationEstimate =
     Eigen::Vector3d::Zero();
 static const Eigen::Vector3d kDefaultInitialDrateEstimate =
     Eigen::Vector3d::Zero();
-static const double kDefaultOutlierThresholdDegrees = 30.0;
-static const int kDefaultMaximumOutlierCount = 10.0;
+static const OutlierRejectionMethod kDefaultOutlierRejectionMethod =
+    MAHALANOBIS_DISTANCE;
+
+static const double kDefaultOutlierRejectionMahalanobisThreshold = 5.0;
+
+static const double kDefaultOutlierRejectionSubsequentThresholdDegrees = 30.0;
+static const int kDefaultOutlierRejectionSubsequentMaximumCount = 10.0;
+
 static const bool kOutputMinimalQuaternions = false;
 
 class RotationalEstimatorParameters {
@@ -149,8 +157,10 @@ class RotationalEstimatorParameters {
         initial_rate_estimate_(kDefaultInitialRateEstimate),
         initial_dorientation_estimate_(kDefaultInitialDorientationEstimate),
         initial_drate_estimate_(kDefaultInitialDrateEstimate),
-        outlier_threshold_degrees_(kDefaultOutlierThresholdDegrees),
-        maximum_outlier_count_(kDefaultMaximumOutlierCount),
+        outlier_rejection_method_(kDefaultOutlierRejectionMethod),
+        outlier_rejection_mahalanobis_threshold_(kDefaultOutlierRejectionMahalanobisThreshold),
+        outlier_rejection_subsequent_threshold_degrees_(kDefaultOutlierRejectionSubsequentThresholdDegrees),
+        outlier_rejection_subsequent_maximum_count_(kDefaultOutlierRejectionSubsequentMaximumCount),
         output_minimal_quaternions_(kOutputMinimalQuaternions){};
 
   double dt_;
@@ -163,8 +173,14 @@ class RotationalEstimatorParameters {
   Eigen::Vector3d initial_rate_estimate_;
   Eigen::Vector3d initial_dorientation_estimate_;
   Eigen::Vector3d initial_drate_estimate_;
-  double outlier_threshold_degrees_;
-  int maximum_outlier_count_;
+
+  OutlierRejectionMethod outlier_rejection_method_;
+
+  double outlier_rejection_mahalanobis_threshold_;
+
+  double outlier_rejection_subsequent_threshold_degrees_;
+  int outlier_rejection_subsequent_maximum_count_;
+
   bool output_minimal_quaternions_;
 };
 
@@ -178,14 +194,12 @@ class RotationalEstimatorResults {
         rate_old_(Eigen::Vector3d::Zero()),
         orientation_estimate_(Eigen::Quaterniond::Identity()),
         rate_estimate_(Eigen::Vector3d::Zero()),
+        covariance_(Eigen::Matrix<double, 6, 6>::Zero()),
         measurement_outlier_flag_(false),
         measurement_flip_flag_(false),
-        q_Z_Z1_(Eigen::Quaterniond::Identity()),
-        q_Z_B_(Eigen::Quaterniond::Identity()),
         q_Z_Z1_magnitude_(0.0),
         q_Z_B_mahalanobis_distance_(0.0),
-        q_covariance_trace_(0.0)
-        {};
+        q_covariance_trace_(0.0){};
 
   // Intermediate Estimator results
   Eigen::Quaterniond orientation_measured_;
@@ -193,10 +207,9 @@ class RotationalEstimatorResults {
   Eigen::Vector3d rate_old_;
   Eigen::Quaterniond orientation_estimate_;
   Eigen::Vector3d rate_estimate_;
+  Eigen::Matrix<double, 6, 6> covariance_;
   bool measurement_outlier_flag_;
   bool measurement_flip_flag_;
-  Eigen::Quaterniond q_Z_Z1_;
-  Eigen::Quaterniond q_Z_B_;
   double q_Z_Z1_magnitude_;
   double q_Z_B_mahalanobis_distance_;
   double q_covariance_trace_;

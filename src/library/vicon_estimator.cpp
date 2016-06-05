@@ -125,7 +125,7 @@ void TranslationalEstimator::updateEstimate(
         // Global state correction (combining priori global state estimate with
         // priori error state estimate)
         estimator_results_.position_estimate_ = estimator_results_.position_old_;
-          estimator_results_.velocity_estimate_ = estimator_results_.velocity_old_;
+        estimator_results_.velocity_estimate_ = estimator_results_.velocity_old_;
 
       }
 
@@ -301,7 +301,7 @@ void RotationalEstimator::updateEstimate(
     // priori error state estimate)
     updateEstimateRecombineErrorGlobal(x_p, &x_m, &dx_p);
     // Writing priori measurement covariance over posteriori covariance
-    Eigen::Matrix<double, 6, 6> P_m = P_p;
+    P_m = P_p;
   }
 
   // Extracting estimated quantities from the posteriori state

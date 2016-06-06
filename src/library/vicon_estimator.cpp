@@ -24,8 +24,6 @@
 #include <stdio.h>
 #include <iostream>
 
-#include <glog/logging.h>
-
 #include "vicon_estimator.h"
 
 namespace vicon_estimator {
@@ -41,7 +39,8 @@ ViconEstimator::ViconEstimator()
 
 void ViconEstimator::updateEstimate(
     const Eigen::Vector3d& position_measured_W,
-    const Eigen::Quaterniond& orientation_measured_B_W, double timestamp) {
+    const Eigen::Quaterniond& orientation_measured_B_W,
+    const double timestamp) {
   // Updating the translational and rotation sub-estimates
   translational_estimator_status_ =
       translational_estimator_.updateEstimate(position_measured_W, timestamp);
@@ -89,7 +88,7 @@ TranslationalEstimator::TranslationalEstimator()
 }
 
 EstimatorStatus TranslationalEstimator::updateEstimate(
-    const Eigen::Vector3d& pos_measured_W, double timestamp) {
+    const Eigen::Vector3d& pos_measured_W, const double timestamp) {
   // Performing some initialization if this is the first measurement.
   // Assuming first measurement valid, saving it and returning.
   if (first_measurement_flag_) {
@@ -216,7 +215,8 @@ Eigen::Vector3d RotationalEstimator::getEstimatedRate() const {
 }
 
 EstimatorStatus RotationalEstimator::updateEstimate(
-    const Eigen::Quaterniond& orientation_measured_B_W, double timestamp) {
+    const Eigen::Quaterniond& orientation_measured_B_W,
+    const double timestamp) {
   // Writing the raw measurement to the intermediate results structure
   estimator_results_.orientation_measured_ = orientation_measured_B_W;
 
@@ -307,13 +307,13 @@ EstimatorStatus RotationalEstimator::updateEstimate(
 
   // Resetting estimator if it has crashed
   bool estimator_crash_flag = checkForEstimatorCrash();
-  if(estimator_crash_flag) {
+  if (estimator_crash_flag) {
     reset();
   }
 
   // Returning the estimator status
   if (estimator_crash_flag) {
-    return EstimatorStatus::CRASHED;
+    return EstimatorStatus::RESET;
   } else {
     if (measurement_update_flag) {
       return EstimatorStatus::OK;
@@ -332,7 +332,7 @@ Eigen::Matrix3d RotationalEstimator::skewMatrix(
 
 void RotationalEstimator::updateEstimatePropagateGlobalEstimate(
     const Eigen::Matrix<double, 7, 1>& x_old, Eigen::Matrix<double, 7, 1>* x_p,
-    double dt) {
+    const double dt) {
   // Extracting components of the state
   Eigen::Quaterniond orienation_estimate_old =
       Eigen::Quaterniond(x_old.block<4, 1>(0, 0));
@@ -355,7 +355,7 @@ void RotationalEstimator::updateEstimatePropagateGlobalEstimate(
 void RotationalEstimator::updateEstimatePropagateErrorEstimate(
     const Eigen::Matrix<double, 6, 1>& dx_old,
     const Eigen::Matrix<double, 7, 1>& x_old, Eigen::Matrix<double, 6, 1>* dx_p,
-    double dt) {
+    const double dt) {
   // Extracting components of the states
   Eigen::Quaterniond orienation_estimate =
       Eigen::Quaterniond(x_old.block<4, 1>(0, 0));
@@ -378,7 +378,7 @@ void RotationalEstimator::updateEstimatePropagateErrorEstimate(
 void RotationalEstimator::updateEstimatePropagateErrorCovariance(
     Eigen::Matrix<double, 6, 6>& covariance_old,
     const Eigen::Matrix<double, 7, 1>& x_old,
-    Eigen::Matrix<double, 6, 6>* covariance_priori, double dt) {
+    Eigen::Matrix<double, 6, 6>* covariance_priori, const double dt) {
   // Extracting components of the state
   Eigen::Quaterniond orientation_estimate =
       Eigen::Quaterniond(x_old.block<4, 1>(0, 0));

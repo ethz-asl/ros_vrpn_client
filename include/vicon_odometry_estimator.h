@@ -22,13 +22,13 @@
 #ifndef VICON_ODOMETRY_ESTIMATOR_H
 #define VICON_ODOMETRY_ESTIMATOR_H
 
-#include <iostream>
-#include <stdio.h>
 #include <math.h>
+#include <stdio.h>
+#include <iostream>
 
-#include <Eigen/Geometry>
 #include <ros/ros.h>
 #include <ros_vrpn_client/viconEstimator.h>
+#include <Eigen/Geometry>
 
 #include "vicon_estimator.h"
 

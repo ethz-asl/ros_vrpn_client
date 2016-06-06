@@ -27,11 +27,7 @@
 namespace vicon_estimator {
 
 // Estimator Status enum
-enum class EstimatorStatus {
-  OK,
-  OUTLIER,
-  CRASHED
-};
+enum class EstimatorStatus { OK, OUTLIER, RESET };
 
 enum class OutlierRejectionMethod {
   MAHALANOBIS_DISTANCE,
@@ -90,7 +86,8 @@ class TranslationalEstimator {
   // Constructor
   TranslationalEstimator();
   // Update estimated quantities with new measurement
-  EstimatorStatus updateEstimate(const Eigen::Vector3d& pos_measured, double timestamp);
+  EstimatorStatus updateEstimate(const Eigen::Vector3d& pos_measured,
+                                 const double timestamp);
   // Reset the estimator
   void reset();
   // Setting the estimator parameters
@@ -180,14 +177,10 @@ class RotationalEstimatorParameters {
   Eigen::Vector3d initial_rate_estimate_;
   Eigen::Vector3d initial_dorientation_estimate_;
   Eigen::Vector3d initial_drate_estimate_;
-
   OutlierRejectionMethod outlier_rejection_method_;
-
   double outlier_rejection_mahalanobis_threshold_;
-
   double outlier_rejection_subsequent_threshold_degrees_;
   int outlier_rejection_subsequent_maximum_count_;
-
   bool output_minimal_quaternions_;
 };
 
@@ -229,8 +222,9 @@ class RotationalEstimator {
   // Constructor
   RotationalEstimator();
   // Update estimated quantities with new measurement
-  EstimatorStatus updateEstimate(const Eigen::Quaterniond& orientation_measured_B_W,
-                      double timestamp);
+  EstimatorStatus updateEstimate(
+      const Eigen::Quaterniond& orientation_measured_B_W,
+      const double timestamp);
   // Reset the estimator
   void reset();
   // Setting the estimator parameters
@@ -270,17 +264,17 @@ class RotationalEstimator {
   // Serial of functions performing the estimate update steps
   void updateEstimatePropagateGlobalEstimate(
       const Eigen::Matrix<double, 7, 1>& x_old,
-      Eigen::Matrix<double, 7, 1>* x_priori, double dt);
+      Eigen::Matrix<double, 7, 1>* x_priori, const double dt);
 
   void updateEstimatePropagateErrorEstimate(
       const Eigen::Matrix<double, 6, 1>& dx_old,
       const Eigen::Matrix<double, 7, 1>& x_old,
-      Eigen::Matrix<double, 6, 1>* dx_priori, double dt);
+      Eigen::Matrix<double, 6, 1>* dx_priori, const double dt);
 
   void updateEstimatePropagateErrorCovariance(
       Eigen::Matrix<double, 6, 6>& cov_old,
       const Eigen::Matrix<double, 7, 1>& x_old,
-      Eigen::Matrix<double, 6, 6>* covariance_priori, double dt);
+      Eigen::Matrix<double, 6, 6>* covariance_priori, const double dt);
 
   void updateEstimateUpdateErrorEstimate(
       const Eigen::Quaterniond& orientation_measured,
@@ -295,7 +289,7 @@ class RotationalEstimator {
       Eigen::Matrix<double, 7, 1>* x_measurement,
       Eigen::Matrix<double, 6, 1>* dx_measurement);
 
-  // Checks if the estimator has crashed and handles this case if it has.
+  // Checks if the estimator has crashed.
   bool checkForEstimatorCrash();
 
   // Detects if the passed measurement is an outlier
@@ -318,7 +312,7 @@ class ViconEstimator {
   // Update estimated quantities with new measurement
   void updateEstimate(const Eigen::Vector3d& position_measured_W,
                       const Eigen::Quaterniond& orientation_measured_B_W,
-                      double timestamp);
+                      const double timestamp);
   // Reset the estimator
   void reset();
   // Set estimator parameters

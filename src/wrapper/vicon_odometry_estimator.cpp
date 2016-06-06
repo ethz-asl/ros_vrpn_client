@@ -26,8 +26,7 @@
 namespace vicon_estimator {
 
 ViconOdometryEstimator::ViconOdometryEstimator(ros::NodeHandle& nh)
-    : vicon_estimator_(),
-      verbose_(kDefaultVerboseFlag) {
+    : vicon_estimator_(), verbose_(kDefaultVerboseFlag) {
   // Creating publisher for intermediate estimator values
   publisher_ = nh.advertise<ros_vrpn_client::viconEstimator>(
       "vicon_intermediate_results", 100);
@@ -195,12 +194,12 @@ void ViconOdometryEstimator::updateEstimate(
   vicon_estimator_.getEstimatorStatuses(&translational_estimator_status,
                                         &rotational_estimator_status);
   if (verbose_) {
-    if (translational_estimator_status == EstimatorStatus::CRASHED) {
+    if (translational_estimator_status == EstimatorStatus::RESET) {
       ROS_WARN("Estimator crashed and restarted: translational estimator");
     } else if (translational_estimator_status == EstimatorStatus::OUTLIER) {
       ROS_WARN("Outlier detected: translational estimator");
     }
-    if (rotational_estimator_status == EstimatorStatus::CRASHED) {
+    if (rotational_estimator_status == EstimatorStatus::RESET) {
       ROS_WARN("Estimator crashed and restarted: rotational estimator");
     } else if (rotational_estimator_status == EstimatorStatus::OUTLIER) {
       ROS_WARN("Outlier detected: rotational estimator");

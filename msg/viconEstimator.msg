@@ -18,5 +18,5 @@ std_msgs/Float64 		  q_covariance_trace
 std_msgs/Bool             outlier_flag           # flag indicating if the measurement at this timestep was detected as being an outlier
 std_msgs/Bool             measurement_flip_flag  # flag indicating if the measurement from vicon has undergone a redundant flipping.
 
-std_msgs/Float64 		  q_Z_Z1_magnitude
-std_msgs/Float64 		  q_Z_B_mahalanobis_distance
+std_msgs/Float64          q_Z_Z1_magnitude       # the magnitude of the quaternion between subsequent measurements
+std_msgs/Float64          q_Z_B_mahalanobis_distance # The mahalanobis distance of the current measurement

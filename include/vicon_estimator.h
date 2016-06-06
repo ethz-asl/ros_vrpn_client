@@ -26,8 +26,18 @@
 
 namespace vicon_estimator {
 
-// Common Estimator parameters
-static const double kDefaultDt = 0.01;
+// Estimator Status enum
+enum class EstimatorStatus {
+  OK,
+  OUTLIER,
+  CRASHED
+};
+
+enum class OutlierRejectionMethod {
+  MAHALANOBIS_DISTANCE,
+  SUBSEQUENT_MEASUREMENTS,
+  NONE
+};
 
 // The parameter class for the translational estimator and parameter default
 // values
@@ -43,13 +53,11 @@ class TranslationalEstimatorParameters {
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
   // Constructor
   TranslationalEstimatorParameters()
-      : dt_(kDefaultDt),
-        kp_(kDefaultTranslationalKp),
+      : kp_(kDefaultTranslationalKp),
         kv_(kDefaultTranslationalKv),
         initial_position_estimate_(kDefaultInitialPositionEstimate),
         initial_velocity_estimate_(kDefaultInitialVelocityEstimate) {}
 
-  double dt_;
   double kp_;
   double kv_;
   Eigen::Vector3d initial_position_estimate_;
@@ -82,7 +90,7 @@ class TranslationalEstimator {
   // Constructor
   TranslationalEstimator();
   // Update estimated quantities with new measurement
-  void updateEstimate(const Eigen::Vector3d& pos_measured, double timestamp);
+  EstimatorStatus updateEstimate(const Eigen::Vector3d& pos_measured, double timestamp);
   // Reset the estimator
   void reset();
   // Setting the estimator parameters
@@ -111,8 +119,6 @@ class TranslationalEstimator {
   bool first_measurement_flag_;
 };
 
-enum OutlierRejectionMethod { MAHALANOBIS_DISTANCE, SUBSEQUENT_MEASUREMENTS };
-
 // The parameter class for the translational estimator and parameter default
 // values
 static const double kDefaultLastTimestamp = -1.0;
@@ -130,7 +136,7 @@ static const Eigen::Vector3d kDefaultInitialDorientationEstimate =
 static const Eigen::Vector3d kDefaultInitialDrateEstimate =
     Eigen::Vector3d::Zero();
 static const OutlierRejectionMethod kDefaultOutlierRejectionMethod =
-    MAHALANOBIS_DISTANCE;
+    OutlierRejectionMethod::MAHALANOBIS_DISTANCE;
 
 static const double kDefaultOutlierRejectionMahalanobisThreshold = 5.0;
 
@@ -144,8 +150,7 @@ class RotationalEstimatorParameters {
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
   // Constructor
   RotationalEstimatorParameters()
-      : dt_(kDefaultDt),
-        dorientation_estimate_initial_covariance_(
+      : dorientation_estimate_initial_covariance_(
             kDefaultdOrientationEstimateInitialCovariance),
         drate_estimate_initial_covariance_(
             kDefaultdRateEstimateInitialCovariance),
@@ -158,12 +163,14 @@ class RotationalEstimatorParameters {
         initial_dorientation_estimate_(kDefaultInitialDorientationEstimate),
         initial_drate_estimate_(kDefaultInitialDrateEstimate),
         outlier_rejection_method_(kDefaultOutlierRejectionMethod),
-        outlier_rejection_mahalanobis_threshold_(kDefaultOutlierRejectionMahalanobisThreshold),
-        outlier_rejection_subsequent_threshold_degrees_(kDefaultOutlierRejectionSubsequentThresholdDegrees),
-        outlier_rejection_subsequent_maximum_count_(kDefaultOutlierRejectionSubsequentMaximumCount),
+        outlier_rejection_mahalanobis_threshold_(
+            kDefaultOutlierRejectionMahalanobisThreshold),
+        outlier_rejection_subsequent_threshold_degrees_(
+            kDefaultOutlierRejectionSubsequentThresholdDegrees),
+        outlier_rejection_subsequent_maximum_count_(
+            kDefaultOutlierRejectionSubsequentMaximumCount),
         output_minimal_quaternions_(kOutputMinimalQuaternions){};
 
-  double dt_;
   double dorientation_estimate_initial_covariance_;
   double drate_estimate_initial_covariance_;
   double dorientation_process_covariance_;
@@ -222,7 +229,7 @@ class RotationalEstimator {
   // Constructor
   RotationalEstimator();
   // Update estimated quantities with new measurement
-  void updateEstimate(const Eigen::Quaterniond& orientation_measured_B_W,
+  EstimatorStatus updateEstimate(const Eigen::Quaterniond& orientation_measured_B_W,
                       double timestamp);
   // Reset the estimator
   void reset();
@@ -288,10 +295,19 @@ class RotationalEstimator {
       Eigen::Matrix<double, 7, 1>* x_measurement,
       Eigen::Matrix<double, 6, 1>* dx_measurement);
 
+  // Checks if the estimator has crashed and handles this case if it has.
+  bool checkForEstimatorCrash();
+
   // Detects if the passed measurement is an outlier
-  bool detectMeasurementOutlier(const Eigen::Quaterniond& orientation_measured);
+  bool detectMeasurementOutlierMahalanobis(
+      const Eigen::Quaterniond& orientation_measured,
+      const Eigen::Matrix<double, 6, 6>& covariance);
+  bool detectMeasurementOutlierSubsequent(
+      const Eigen::Quaterniond& orientation_measured);
   // Returns the magnitude of the rotation represented by a quaternion
   double quaternionRotationMagnitude(const Eigen::Quaterniond& rotation);
+  // Ensure covariance symmetry
+  void makeCovarianceSymmetric(Eigen::Matrix<double, 6, 6>* covariance);
 };
 
 class ViconEstimator {
@@ -315,6 +331,9 @@ class ViconEstimator {
       TranslationalEstimatorResults* translational_estimator_results,
       RotationalEstimatorResults* rotational_estimator_results) const;
 
+  void getEstimatorStatuses(EstimatorStatus* translational_estimator_status,
+                            EstimatorStatus* rotational_estimator_status) const;
+
   // Functions providing access to the various estimates
   Eigen::Vector3d getEstimatedPosition() const {
     return translational_estimator_.getEstimatedPosition();
@@ -332,6 +351,8 @@ class ViconEstimator {
  private:
   TranslationalEstimator translational_estimator_;
   RotationalEstimator rotational_estimator_;
+  EstimatorStatus translational_estimator_status_;
+  EstimatorStatus rotational_estimator_status_;
 };
 }
 

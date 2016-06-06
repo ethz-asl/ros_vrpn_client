@@ -26,7 +26,8 @@
 namespace vicon_estimator {
 
 ViconOdometryEstimator::ViconOdometryEstimator(ros::NodeHandle& nh)
-    : vicon_estimator_() {
+    : vicon_estimator_(),
+      verbose_(kDefaultVerboseFlag) {
   // Creating publisher for intermediate estimator values
   publisher_ = nh.advertise<ros_vrpn_client::viconEstimator>(
       "vicon_intermediate_results", 100);
@@ -37,14 +38,12 @@ void ViconOdometryEstimator::initializeParameters(ros::NodeHandle& nh) {
   // server
   vicon_estimator::TranslationalEstimatorParameters
       translationalEstimatorParameters;
-  nh.getParam("vicon_estimator/dt", translationalEstimatorParameters.dt_);
   nh.getParam("translational_estimator/kp",
               translationalEstimatorParameters.kp_);
   nh.getParam("translational_estimator/kv",
               translationalEstimatorParameters.kv_);
   // Recovering rotational estimator parameters values from the parameter server
   vicon_estimator::RotationalEstimatorParameters rotationalEstimatorParameters;
-  nh.getParam("vicon_estimator/dt", rotationalEstimatorParameters.dt_);
   nh.getParam(
       "rotational_estimator/orientation_estimate_initial_covariance",
       rotationalEstimatorParameters.dorientation_estimate_initial_covariance_);
@@ -69,31 +68,39 @@ void ViconOdometryEstimator::initializeParameters(ros::NodeHandle& nh) {
 
   if (!outlier_rejection_method_string.compare("mahalanobis_distance")) {
     rotationalEstimatorParameters.outlier_rejection_method_ =
-        MAHALANOBIS_DISTANCE;
-    std::cout << "mahalanobis_distance" << std::endl << std::endl;
+        OutlierRejectionMethod::MAHALANOBIS_DISTANCE;
   } else if (!outlier_rejection_method_string.compare(
                  "subsequent_measurements")) {
     rotationalEstimatorParameters.outlier_rejection_method_ =
-        SUBSEQUENT_MEASUREMENTS;
-    std::cout << "subsequent_measurements" << std::endl << std::endl;
+        OutlierRejectionMethod::SUBSEQUENT_MEASUREMENTS;
+  } else if (!outlier_rejection_method_string.compare("none")) {
+    rotationalEstimatorParameters.outlier_rejection_method_ =
+        OutlierRejectionMethod::NONE;
   } else {
-    ROS_WARN_STREAM("Outlier rejection method requested ("
-                    << outlier_rejection_method_string
-                    << ") Not recognized. Please select one of "
-                       "\"mahalanobis_distance\", \"subsequent_measurements\". "
-                       "Using default value.");
+    ROS_WARN_STREAM(
+        "Outlier rejection method requested ("
+        << outlier_rejection_method_string
+        << ") Not recognized. Please select one of "
+           "\"mahalanobis_distance\", \"subsequent_measurements\", \"none\". "
+           "Using default value.");
   }
 
-  nh.getParam("rotational_estimator/outlier_rejection_mahalanobis_threshold",
-              rotationalEstimatorParameters.outlier_rejection_mahalanobis_threshold_);
+  nh.getParam(
+      "rotational_estimator/outlier_rejection_mahalanobis_threshold",
+      rotationalEstimatorParameters.outlier_rejection_mahalanobis_threshold_);
 
-  nh.getParam("rotational_estimator/outlier_rejection_subsequent_threshold_degrees",
-              rotationalEstimatorParameters.outlier_rejection_subsequent_threshold_degrees_);
+  nh.getParam(
+      "rotational_estimator/outlier_rejection_subsequent_threshold_degrees",
+      rotationalEstimatorParameters
+          .outlier_rejection_subsequent_threshold_degrees_);
   nh.getParam("rotational_estimator/outlier_rejection_subsequent_maximum_count",
-              rotationalEstimatorParameters.outlier_rejection_subsequent_maximum_count_);
+              rotationalEstimatorParameters
+                  .outlier_rejection_subsequent_maximum_count_);
 
   nh.getParam("rotational_estimator/output_minimal_quaternions",
               rotationalEstimatorParameters.output_minimal_quaternions_);
+
+  nh.getParam("verbose", verbose_);
 
   // Setting parameters in estimator
   vicon_estimator_.setParameters(translationalEstimatorParameters,
@@ -182,5 +189,22 @@ void ViconOdometryEstimator::updateEstimate(
   // Updating the estimates
   vicon_estimator_.updateEstimate(position_measured_W, orientation_measured_B_W,
                                   timestamp_double);
+  // Getting the estimator statuses
+  EstimatorStatus rotational_estimator_status;
+  EstimatorStatus translational_estimator_status;
+  vicon_estimator_.getEstimatorStatuses(&translational_estimator_status,
+                                        &rotational_estimator_status);
+  if (verbose_) {
+    if (translational_estimator_status == EstimatorStatus::CRASHED) {
+      ROS_WARN("Estimator crashed and restarted: translational estimator");
+    } else if (translational_estimator_status == EstimatorStatus::OUTLIER) {
+      ROS_WARN("Outlier detected: translational estimator");
+    }
+    if (rotational_estimator_status == EstimatorStatus::CRASHED) {
+      ROS_WARN("Estimator crashed and restarted: rotational estimator");
+    } else if (rotational_estimator_status == EstimatorStatus::OUTLIER) {
+      ROS_WARN("Outlier detected: rotational estimator");
+    }
+  }
 }
 }

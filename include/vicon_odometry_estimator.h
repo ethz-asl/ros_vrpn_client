@@ -34,6 +34,8 @@
 
 namespace vicon_estimator {
 
+static const bool kDefaultVerboseFlag = true;
+
 class ViconOdometryEstimator {
  public:
   // Constructor
@@ -74,6 +76,8 @@ class ViconOdometryEstimator {
   vicon_estimator::ViconEstimator vicon_estimator_;
   // Publisher
   ros::Publisher publisher_;
+  // Flag for verbose output
+  bool verbose_;
 };
 }
 

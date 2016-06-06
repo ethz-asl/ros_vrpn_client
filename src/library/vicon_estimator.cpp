@@ -143,6 +143,7 @@ void TranslationalEstimator::setParameters(
   estimator_parameters_ = estimator_parameters;
 }
 
+//translational outlier rejection written by F.Grigis (fgrigis@student.ethz.ch) based on the code of Alex Millane
 bool TranslationalEstimator::detectTranslationalMeasurementOutlier(
     const Eigen::Vector3d& pos_measured) {
 
@@ -156,7 +157,7 @@ bool TranslationalEstimator::detectTranslationalMeasurementOutlier(
 
   //Compare new measurement with old measuerement and constructing error vector
   Eigen::Vector3d error = (pos_measured_old_ - pos_measured);
-  // Detecting if the measurement is an outlier
+  // Detecting if the measurement is an outlier. If the
   bool measurement_outlier_flag =
       (error.norm()>=estimator_parameters_.outlier_threshold_m_);
 

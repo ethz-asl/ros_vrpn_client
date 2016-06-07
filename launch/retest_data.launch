@@ -1,14 +1,16 @@
 <launch>
 
-  <arg name="mav_name" default="euroc6" />
+  <arg name="mav_name" default="bluebird" />
   <arg name="namespace" default="$(arg mav_name)" />
+  <arg name="bagfile" default="/home/millanea/trunk/vicon_odometry/vrpn_client_fault_finding/data/2016/velocity_check.bag" />
+  <arg name="start_time" default="100" />
 
   <!-- The namespace all node occupy-->
   <group ns="$(arg namespace)" >
 
     <!-- Playing back the data -->
     <node name="rosbag_play" type="play" pkg="rosbag" output="screen"
-      args=" --start=0 /home/millanea/trunk/vicon_odometry/vrpn_client_fault_finding/data/2016/zac_round2.bag">
+      args=" --start=$(arg start_time) $(arg bagfile)">
       <remap from="vrpn_client/estimated_transform" to="disused1" />  
       <remap from="vrpn_client/estimated_odometry" to="disused2" />  
       <remap from="vrpn_client/vicon_intermediate_results" to="disused3" />  
@@ -18,10 +20,10 @@
     <node name="vicon_estimator" type="vicon_estimation_node" pkg="ros_vrpn_client" output="screen">
       <param name="object_name" value="$(arg mav_name)" />
       <param name="verbose" value="true" />
-      <param name="translational_estimator/kp" value="1.0" />
-      <param name="translational_estimator/kv" value="0.1" />
-      <param name="rotational_estimator/orientation_estimate_initial_covariance" value="100.0" />
-      <param name="rotational_estimator/rate_estimate_initial_covariance" value="100.0" />
+      <param name="translational_estimator/kp" value="0.5" />
+      <param name="translational_estimator/kv" value="0.5" />
+      <param name="rotational_estimator/orientation_estimate_initial_covariance" value="10.0" />
+      <param name="rotational_estimator/rate_estimate_initial_covariance" value="10.0" />
       <param name="rotational_estimator/orientation_process_covariance" value="0.000002" />
       <param name="rotational_estimator/rate_process_covariance" value="10.0" />
       <param name="rotational_estimator/orientation_measurementCovariance" value="0.001" />

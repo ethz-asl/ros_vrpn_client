@@ -61,10 +61,6 @@ void ViconOdometryEstimator::initializeParameters(ros::NodeHandle& nh) {
   nh.getParam("rotational_estimator/outlier_rejection_method",
               outlier_rejection_method_string);
 
-  std::cout << "outlier_rejection_method_string"
-            << outlier_rejection_method_string << std::endl
-            << std::endl;
-
   if (!outlier_rejection_method_string.compare("mahalanobis_distance")) {
     rotationalEstimatorParameters.outlier_rejection_method_ =
         OutlierRejectionMethod::MAHALANOBIS_DISTANCE;

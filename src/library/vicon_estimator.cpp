@@ -24,6 +24,8 @@
 #include <stdio.h>
 #include <iostream>
 
+#include <glog/logging.h>
+
 #include "vicon_estimator.h"
 
 namespace vicon_estimator {
@@ -94,6 +96,8 @@ EstimatorStatus TranslationalEstimator::updateEstimate(
   if (first_measurement_flag_) {
     first_measurement_flag_ = false;
     last_timestamp_ = timestamp;
+    position_estimate_W_ = pos_measured_W;
+    return EstimatorStatus::OK;
   }
   // Calculating the time difference to the last measurement
   double dt = timestamp - last_timestamp_;
@@ -229,6 +233,8 @@ EstimatorStatus RotationalEstimator::updateEstimate(
     first_measurement_flag_ = false;
     orientation_measured_old_ = orientation_measured_B_W;
     last_timestamp_ = timestamp;
+    orientation_estimate_B_W_ = orientation_measured_B_W;
+    return EstimatorStatus::OK;
   }
 
   // Calculating the time difference to the last measurement
@@ -333,6 +339,8 @@ Eigen::Matrix3d RotationalEstimator::skewMatrix(
 void RotationalEstimator::updateEstimatePropagateGlobalEstimate(
     const Eigen::Matrix<double, 7, 1>& x_old, Eigen::Matrix<double, 7, 1>* x_p,
     const double dt) {
+  // Argument checks
+  CHECK_NOTNULL(x_p);
   // Extracting components of the state
   Eigen::Quaterniond orienation_estimate_old =
       Eigen::Quaterniond(x_old.block<4, 1>(0, 0));
@@ -356,6 +364,8 @@ void RotationalEstimator::updateEstimatePropagateErrorEstimate(
     const Eigen::Matrix<double, 6, 1>& dx_old,
     const Eigen::Matrix<double, 7, 1>& x_old, Eigen::Matrix<double, 6, 1>* dx_p,
     const double dt) {
+  // Argument checks
+  CHECK_NOTNULL(dx_p);
   // Extracting components of the states
   Eigen::Quaterniond orienation_estimate =
       Eigen::Quaterniond(x_old.block<4, 1>(0, 0));
@@ -379,6 +389,8 @@ void RotationalEstimator::updateEstimatePropagateErrorCovariance(
     Eigen::Matrix<double, 6, 6>& covariance_old,
     const Eigen::Matrix<double, 7, 1>& x_old,
     Eigen::Matrix<double, 6, 6>* covariance_priori, const double dt) {
+  // Argument checks
+  CHECK_NOTNULL(covariance_priori);
   // Extracting components of the state
   Eigen::Quaterniond orientation_estimate =
       Eigen::Quaterniond(x_old.block<4, 1>(0, 0));
@@ -390,7 +402,7 @@ void RotationalEstimator::updateEstimatePropagateErrorCovariance(
       Eigen::Matrix3d::Zero(), Eigen::Matrix3d::Zero();
   L << Eigen::Matrix3d::Identity(), Eigen::Matrix3d::Zero(),
       Eigen::Matrix3d::Zero(), Eigen::Matrix3d::Identity();
-  // Performing propagation
+  // Performing propagation ( P_kp1=A_d * P_k * A_d' + L * Qd * L' )
   Eigen::Matrix<double, 6, 6> covariance_priori_propagation;
   Eigen::Matrix<double, 6, 6> covariance_priori_addition;
   Eigen::Matrix<double, 6, 6> A_d =
@@ -410,6 +422,9 @@ void RotationalEstimator::updateEstimateUpdateErrorEstimate(
     const Eigen::Matrix<double, 6, 6>& covariance_priori,
     Eigen::Matrix<double, 6, 1>* dx_m,
     Eigen::Matrix<double, 6, 6>* covariance_measurement) {
+  // Argument checks
+  CHECK_NOTNULL(dx_m);
+  CHECK_NOTNULL(covariance_measurement);
   // Extracting components of the state
   Eigen::Quaterniond orientation_estimate_priori =
       Eigen::Quaterniond(x_priori.block<4, 1>(0, 0));
@@ -473,6 +488,9 @@ void RotationalEstimator::updateEstimateRecombineErrorGlobal(
     const Eigen::Matrix<double, 7, 1> x_priori,
     Eigen::Matrix<double, 7, 1>* x_measurement,
     Eigen::Matrix<double, 6, 1>* dx_measurement) {
+  // Argument checks
+  CHECK_NOTNULL(x_measurement);
+  CHECK_NOTNULL(dx_measurement);
   // Extracting components of the state
   Eigen::Quaterniond orientation_estimate_priori =
       Eigen::Quaterniond(x_priori.block<4, 1>(0, 0));
@@ -512,7 +530,7 @@ void RotationalEstimator::updateEstimateRecombineErrorGlobal(
 
 bool RotationalEstimator::checkForEstimatorCrash() {
   // Testing if covariance matrix member is nan.
-  double nan_test = covariance_(0, 0);
+  double nan_test = covariance_.sum();
   return std::isnan(nan_test);
 }
 
@@ -600,6 +618,8 @@ double RotationalEstimator::quaternionRotationMagnitude(
 
 void RotationalEstimator::makeCovarianceSymmetric(
     Eigen::Matrix<double, 6, 6>* covariance) {
+  // Argument checks
+  CHECK_NOTNULL(covariance);
   *covariance = (*covariance + covariance->transpose()) / 2;
 }
 }

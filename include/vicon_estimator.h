@@ -263,18 +263,18 @@ class RotationalEstimator {
   Eigen::Matrix3d skewMatrix(const Eigen::Vector3d& vec) const;
   // Serial of functions performing the estimate update steps
   void updateEstimatePropagateGlobalEstimate(
-      const Eigen::Matrix<double, 7, 1>& x_old,
-      Eigen::Matrix<double, 7, 1>* x_priori, const double dt);
+      const Eigen::Matrix<double, 7, 1>& x_old, const double dt,
+      Eigen::Matrix<double, 7, 1>* x_priori);
 
   void updateEstimatePropagateErrorEstimate(
       const Eigen::Matrix<double, 6, 1>& dx_old,
-      const Eigen::Matrix<double, 7, 1>& x_old,
-      Eigen::Matrix<double, 6, 1>* dx_priori, const double dt);
+      const Eigen::Matrix<double, 7, 1>& x_old, const double dt,
+      Eigen::Matrix<double, 6, 1>* dx_priori);
 
   void updateEstimatePropagateErrorCovariance(
       Eigen::Matrix<double, 6, 6>& cov_old,
-      const Eigen::Matrix<double, 7, 1>& x_old,
-      Eigen::Matrix<double, 6, 6>* covariance_priori, const double dt);
+      const Eigen::Matrix<double, 7, 1>& x_old, const double dt,
+      Eigen::Matrix<double, 6, 6>* covariance_priori);
 
   void updateEstimateUpdateErrorEstimate(
       const Eigen::Quaterniond& orientation_measured,

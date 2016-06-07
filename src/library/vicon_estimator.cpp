@@ -245,19 +245,19 @@ EstimatorStatus RotationalEstimator::updateEstimate(
   Eigen::Matrix<double, 7, 1> x_old;
   Eigen::Matrix<double, 7, 1> x_p;
   x_old << orientation_estimate_B_W_.coeffs(), rate_estimate_B_;
-  updateEstimatePropagateGlobalEstimate(x_old, &x_p, dt);
+  updateEstimatePropagateGlobalEstimate(x_old, dt, &x_p);
 
   // Propagating the error state estimate
   Eigen::Matrix<double, 6, 1> dx_old;
   Eigen::Matrix<double, 6, 1> dx_p;
   dx_old << dorientation_estimate_, drate_estimate_;
-  updateEstimatePropagateErrorEstimate(dx_old, x_old, &dx_p, dt);
+  updateEstimatePropagateErrorEstimate(dx_old, x_old, dt, &dx_p);
 
   // Propagating the estimate covariance
   Eigen::Matrix<double, 6, 6> P_old;
   Eigen::Matrix<double, 6, 6> P_p;
   P_old = covariance_;
-  updateEstimatePropagateErrorCovariance(P_old, x_old, &P_p, dt);
+  updateEstimatePropagateErrorCovariance(P_old, x_old, dt, &P_p);
 
   // Posteriori variables
   Eigen::Matrix<double, 7, 1> x_m;
@@ -337,8 +337,8 @@ Eigen::Matrix3d RotationalEstimator::skewMatrix(
 }
 
 void RotationalEstimator::updateEstimatePropagateGlobalEstimate(
-    const Eigen::Matrix<double, 7, 1>& x_old, Eigen::Matrix<double, 7, 1>* x_p,
-    const double dt) {
+    const Eigen::Matrix<double, 7, 1>& x_old, const double dt,
+    Eigen::Matrix<double, 7, 1>* x_p) {
   // Argument checks
   CHECK_NOTNULL(x_p);
   // Extracting components of the state
@@ -362,8 +362,8 @@ void RotationalEstimator::updateEstimatePropagateGlobalEstimate(
 
 void RotationalEstimator::updateEstimatePropagateErrorEstimate(
     const Eigen::Matrix<double, 6, 1>& dx_old,
-    const Eigen::Matrix<double, 7, 1>& x_old, Eigen::Matrix<double, 6, 1>* dx_p,
-    const double dt) {
+    const Eigen::Matrix<double, 7, 1>& x_old, const double dt,
+    Eigen::Matrix<double, 6, 1>* dx_p) {
   // Argument checks
   CHECK_NOTNULL(dx_p);
   // Extracting components of the states
@@ -387,8 +387,8 @@ void RotationalEstimator::updateEstimatePropagateErrorEstimate(
 
 void RotationalEstimator::updateEstimatePropagateErrorCovariance(
     Eigen::Matrix<double, 6, 6>& covariance_old,
-    const Eigen::Matrix<double, 7, 1>& x_old,
-    Eigen::Matrix<double, 6, 6>* covariance_priori, const double dt) {
+    const Eigen::Matrix<double, 7, 1>& x_old, const double dt,
+    Eigen::Matrix<double, 6, 6>* covariance_priori) {
   // Argument checks
   CHECK_NOTNULL(covariance_priori);
   // Extracting components of the state

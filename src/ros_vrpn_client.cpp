@@ -292,8 +292,9 @@ void VRPN_CALLBACK track_target(void*, const vrpn_TRACKERCB tracker) {
 
   // Updating the estimates with the new measurements.
   vicon_odometry_estimator->updateEstimate(position_measured_W,
-                                           orientation_measured_B_W);
-  Eigen::Vector3d position_estimate_W =
+                                          orientation_measured_B_W,
+                                          timestamp);
+  Eigen::Vector3d position_estimate_W = 
       vicon_odometry_estimator->getEstimatedPosition();
   Eigen::Vector3d velocity_estimate_W =
       vicon_odometry_estimator->getEstimatedVelocity();

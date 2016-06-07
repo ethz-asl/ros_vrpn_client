@@ -19,8 +19,8 @@
  * limitations under the License.
  */
 
-#ifndef VICON_ODOMETRY_ESTIMATOR_H
-#define VICON_ODOMETRY_ESTIMATOR_H
+#ifndef BEBOP_ODOMETRY_ESTIMATOR_H
+#define BEBOP_ODOMETRY_ESTIMATOR_H
 
 #include <iostream>
 #include <stdio.h>

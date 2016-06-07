@@ -42,6 +42,11 @@ void ViconOdometryEstimator::initializeParameters(ros::NodeHandle& nh) {
               translationalEstimatorParameters.kp_);
   nh.getParam("translational_estimator/kv",
               translationalEstimatorParameters.kv_);
+  nh.getParam("translational_estimator/outlier_threshold_meters",
+                translationalEstimatorParameters.outlier_threshold_meters_);
+  nh.getParam("translational_estimator/maximum_outlier_count",
+                translationalEstimatorParameters.maximum_outlier_count_);
+
   // Recovering rotational estimator parameters values from the parameter server
   vicon_estimator::RotationalEstimatorParameters rotationalEstimatorParameters;
   nh.getParam("vicon_estimator/dt", rotationalEstimatorParameters.dt_);
@@ -60,7 +65,7 @@ void ViconOdometryEstimator::initializeParameters(ros::NodeHandle& nh) {
   nh.getParam("rotational_estimator/outlier_threshold_degrees",
               rotationalEstimatorParameters.outlier_threshold_degrees_);
   nh.getParam("rotational_estimator/maximum_outlier_count",
-              rotationalEstimatorParameters.maximum_outlier_count_rotation_);
+              rotationalEstimatorParameters.maximum_outlier_count_);
   nh.getParam("rotational_estimator/output_minimal_quaternions",
               rotationalEstimatorParameters.output_minimal_quaternions_);
 
@@ -116,7 +121,7 @@ void ViconOdometryEstimator::publishIntermediateResults(ros::Time timestamp) {
 
   // Data to do with the orientation measurement outlier detection
   msg.outlier_flag.data =
-      rotational_estimator_results.measurement_rotational_outlier_flag_;
+      rotational_estimator_results.measurement_outlier_flag_;
   msg.measurement_flip_flag.data =
       rotational_estimator_results.measurement_flip_flag_;
   tf::quaternionEigenToMsg(rotational_estimator_results.q_Z_Z1_, msg.q_Z_Z1);

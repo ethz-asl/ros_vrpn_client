@@ -4,18 +4,20 @@
     <param name="vrpn_server_ip" value="vicon" />
     <param name="vrpn_coordinate_system" value="vicon" />
     <param name="timestamping_system" value="tracker" />
-    <param name="object_name" value="$(arg object_name)" />
-    <param name="display_time_delay" value="true" />
-    <param name="vicon_estimator/dt" value="0.01" />
-    <param name="translational_estimator/kp" value="1.0" />
-    <param name="translational_estimator/kv" value="0.1" />
-    <param name="rotational_estimator/orientation_estimate_initial_covariance" value="1" />
-    <param name="rotational_estimator/rate_estimate_initial_covariance" value="1" />
-    <param name="rotational_estimator/orientation_process_covariance" value="0.00001" />
-    <param name="rotational_estimator/rate_process_covariance" value="10" />
-    <param name="rotational_estimator/orientation_measurementCovariance" value="0.005" />
-    <param name="rotational_estimator/outlier_threshold_degrees" value="30" />
-    <param name="rotational_estimator/maximum_outlier_count" value="50" />    
+    <param name="object_name" value="$(arg mav_name)" />
+    <param name="verbose" value="true" />
+    <param name="translational_estimator/kp" value="0.5" />
+    <param name="translational_estimator/kv" value="0.5" />
+    <param name="rotational_estimator/orientation_estimate_initial_covariance" value="100.0" />
+    <param name="rotational_estimator/rate_estimate_initial_covariance" value="100.0" />
+    <param name="rotational_estimator/orientation_process_covariance" value="0.000002" />
+    <param name="rotational_estimator/rate_process_covariance" value="10.0" />
+    <param name="rotational_estimator/orientation_measurementCovariance" value="0.001" />
+    <param name="rotational_estimator/outlier_rejection_method" value="mahalanobis_distance" />
+    <param name="rotational_estimator/outlier_rejection_mahalanobis_threshold" value="4.0" />
+    <param name="rotational_estimator/outlier_rejection_subsequent_threshold_degrees" value="30.0" />
+    <param name="rotational_estimator/outlier_rejection_subsequent_maximum_count" value="50.0" />
+    <param name="rotational_estimator/output_minimal_quaternions" value="false" />
     <param name="rotational_estimator/output_minimal_quaternions" value="false" />
   </node>
 </launch>

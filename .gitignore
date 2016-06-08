@@ -34,3 +34,6 @@
 .cproject
 .project
 .settings
+
+# Sublime stuff
+.clang_complete

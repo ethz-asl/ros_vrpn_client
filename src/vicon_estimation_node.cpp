@@ -65,9 +65,11 @@ class ViconDataListener {
     Eigen::Quaterniond orientation_measured_B_W;
     tf::vectorMsgToEigen(msg->transform.translation, position_measured_W);
     tf::quaternionMsgToEigen(msg->transform.rotation, orientation_measured_B_W);
+    ros::Time timestamp = msg->header.stamp;
     // Passing the received data to the estimator
     vicon_odometry_estimator_->updateEstimate(position_measured_W,
-                                              orientation_measured_B_W);
+                                              orientation_measured_B_W,
+                                              timestamp);
     // Retreiving the estimates
     Eigen::Vector3d position_estimate_W =
         vicon_odometry_estimator_->getEstimatedPosition();

@@ -12,8 +12,11 @@ geometry_msgs/Vector3     omega_old              # the old body rate
 geometry_msgs/Quaternion  quat_est               # the posteriori body orientation
 geometry_msgs/Vector3     omega_est              # the posteriori body rate
 
+std_msgs/Float64MultiArray covariance
+std_msgs/Float64 		  q_covariance_trace
+
 std_msgs/Bool             outlier_flag           # flag indicating if the measurement at this timestep was detected as being an outlier
 std_msgs/Bool             measurement_flip_flag  # flag indicating if the measurement from vicon has undergone a redundant flipping.
 
-geometry_msgs/Quaternion  q_Z_Z1                 # the quaternion representing the rotation between subsequent measurements
-geometry_msgs/Quaternion  q_Z_B                  # the quaternion representing the rotation between measurement and body
+std_msgs/Float64          q_Z_Z1_magnitude       # the magnitude of the quaternion between subsequent measurements
+std_msgs/Float64          q_Z_B_mahalanobis_distance # The mahalanobis distance of the current measurement

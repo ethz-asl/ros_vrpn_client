@@ -22,17 +22,19 @@
 #ifndef VICON_ODOMETRY_ESTIMATOR_H
 #define VICON_ODOMETRY_ESTIMATOR_H
 
-#include <iostream>
-#include <stdio.h>
 #include <math.h>
+#include <stdio.h>
+#include <iostream>
 
-#include <Eigen/Geometry>
 #include <ros/ros.h>
 #include <ros_vrpn_client/viconEstimator.h>
+#include <Eigen/Geometry>
 
 #include "vicon_estimator.h"
 
 namespace vicon_estimator {
+
+static const bool kDefaultVerboseFlag = true;
 
 class ViconOdometryEstimator {
  public:
@@ -49,7 +51,9 @@ class ViconOdometryEstimator {
   // Calls the underlying estimator, updating the estimate with the latest
   // measurement
   void updateEstimate(const Eigen::Vector3d& position_measured_W,
-                      const Eigen::Quaterniond& orientation_measured_B_W);
+                      const Eigen::Quaterniond& orientation_measured_B_W,
+                      ros::Time timestamp);
+
   // Getter methods for estimates values
   Eigen::Vector3d getEstimatedPosition() const {
     return vicon_estimator_.getEstimatedPosition();
@@ -72,6 +76,8 @@ class ViconOdometryEstimator {
   vicon_estimator::ViconEstimator vicon_estimator_;
   // Publisher
   ros::Publisher publisher_;
+  // Flag for verbose output
+  bool verbose_;
 };
 }
 

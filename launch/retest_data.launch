@@ -1,0 +1,43 @@
+<launch>
+
+  <arg name="mav_name" default="bluebird" />
+  <arg name="namespace" default="$(arg mav_name)" />
+  <arg name="bagfile" default="/home/millanea/trunk/vicon_odometry/vrpn_client_fault_finding/data/2016/velocity_check.bag" />
+  <arg name="start_time" default="100" />
+
+  <!-- The namespace all node occupy-->
+  <group ns="$(arg namespace)" >
+
+    <!-- Playing back the data -->
+    <node name="rosbag_play" type="play" pkg="rosbag" output="screen"
+      args=" --start=$(arg start_time) $(arg bagfile)">
+      <remap from="vrpn_client/estimated_transform" to="disused1" />  
+      <remap from="vrpn_client/estimated_odometry" to="disused2" />  
+      <remap from="vrpn_client/vicon_intermediate_results" to="disused3" />  
+    </node>
+
+    <!-- Ros Vrpn Estimation node -->
+    <node name="vicon_estimator" type="vicon_estimation_node" pkg="ros_vrpn_client" output="screen">
+      <param name="object_name" value="$(arg mav_name)" />
+      <param name="verbose" value="true" />
+      <param name="translational_estimator/kp" value="0.5" />
+      <param name="translational_estimator/kv" value="0.5" />
+      <param name="rotational_estimator/orientation_estimate_initial_covariance" value="10.0" />
+      <param name="rotational_estimator/rate_estimate_initial_covariance" value="10.0" />
+      <param name="rotational_estimator/orientation_process_covariance" value="0.000002" />
+      <param name="rotational_estimator/rate_process_covariance" value="10.0" />
+      <param name="rotational_estimator/orientation_measurementCovariance" value="0.001" />
+      <param name="rotational_estimator/outlier_rejection_method" value="mahalanobis_distance" />
+      <param name="rotational_estimator/outlier_rejection_mahalanobis_threshold" value="4.0" />
+      <param name="rotational_estimator/outlier_rejection_subsequent_threshold_degrees" value="30.0" />
+      <param name="rotational_estimator/outlier_rejection_subsequent_maximum_count" value="50.0" />
+      <param name="rotational_estimator/output_minimal_quaternions" value="false" />
+    </node>
+
+    <node name="rosbag_record" type="record" pkg="rosbag" output="screen"
+      args=" -o /home/millanea/trunk/vicon_odometry/vrpn_client_fault_finding/output/ /$(arg mav_name)/vicon_estimator/estimated_odometry /$(arg mav_name)/vicon_estimator/estimated_transform /$(arg mav_name)/vicon_estimator/vicon_intermediate_results /$(arg mav_name)/vrpn_client/raw_transform">
+    </node>
+
+  </group>
+
+</launch>

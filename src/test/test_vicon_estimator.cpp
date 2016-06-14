@@ -20,14 +20,14 @@
  */
 
 #include <math.h>
-#include <iostream>
 #include <fstream>
+#include <iostream>
 
 #include <gtest/gtest.h>
 #include <Eigen/Geometry>
 
-#include "vicon_estimator.h"
 #include "test_helper_library.h"
+#include "vicon_estimator.h"
 
 // Translational trajectory defines
 #define TRANS_TRAJECTORY_PERIOD 10.0
@@ -110,7 +110,7 @@ void generateTranslationalTrajectorySinusoidal(const int trajectory_length,
   // Generating the timestamps
   timestamps[0] = 0.0;
   for (int i = 1; i < trajectory_length; i++) {
-    timestamps[i] = timestamps[i-1] + TRANS_TRAJECTORY_DT;
+    timestamps[i] = timestamps[i - 1] + TRANS_TRAJECTORY_DT;
   }
 }
 
@@ -133,7 +133,7 @@ TEST(translationalEstimator, sinusoidal_clean) {
   double velocity_trajectory[trajectory_length][3];
   double timestamps[trajectory_length];
   generateTranslationalTrajectorySinusoidal(
-    trajectory_length, position_trajectory, velocity_trajectory, timestamps);
+      trajectory_length, position_trajectory, velocity_trajectory, timestamps);
 
   // Looping over trajectory and retrieving estimates
   double position_trajectory_estimate[trajectory_length][3];
@@ -272,7 +272,7 @@ void generateRotationalTrajectorySinusoidal(const int trajectory_length,
   // Generating the timestamps
   timestamps[0] = 0.0;
   for (int i = 1; i < trajectory_length; i++) {
-    timestamps[i] = timestamps[i-1] + TRANS_TRAJECTORY_DT;
+    timestamps[i] = timestamps[i - 1] + TRANS_TRAJECTORY_DT;
   }
 }
 
@@ -297,8 +297,8 @@ TEST(rotationalEstimator, sinusoidal_clean) {
   double orientation_trajectory[trajectory_length][4];
   double omega_trajectory[trajectory_length][3];
   double timestamps[trajectory_length];
-  generateRotationalTrajectorySinusoidal(trajectory_length, orientation_trajectory,
-                                         omega_trajectory, timestamps);
+  generateRotationalTrajectorySinusoidal(
+      trajectory_length, orientation_trajectory, omega_trajectory, timestamps);
 
   // Looping over trajectory and retrieving estimates
   double orientation_estimate_trajectory[trajectory_length][4];
@@ -451,9 +451,8 @@ TEST(rotationalEstimator, sinusoidal_corrupted) {
   double orientation_trajectory[trajectory_length][4];
   double omega_trajectory[trajectory_length][3];
   double timestamps[trajectory_length];
-  generateRotationalTrajectorySinusoidal(trajectory_length,
-                                         orientation_trajectory,
-                                         omega_trajectory, timestamps);
+  generateRotationalTrajectorySinusoidal(
+      trajectory_length, orientation_trajectory, omega_trajectory, timestamps);
 
   // Constructing the measurement vector
   Eigen::Quaterniond clean_input_trajectory[trajectory_length];
@@ -477,7 +476,8 @@ TEST(rotationalEstimator, sinusoidal_corrupted) {
   double rollrate_estimate_trajectory[trajectory_length][3];
   for (int i = 0; i < trajectory_length; i++) {
     // Updating the estimate with the measurement
-    rotational_estimator.updateEstimate(corrupted_input_trajectory[i], timestamps[i]);
+    rotational_estimator.updateEstimate(corrupted_input_trajectory[i],
+                                        timestamps[i]);
     // Getting the position and velocity estimates
     Eigen::Quaterniond estimated_orientation =
         rotational_estimator.getEstimatedOrientation();

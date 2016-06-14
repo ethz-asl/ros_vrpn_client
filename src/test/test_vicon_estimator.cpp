@@ -20,14 +20,14 @@
  */
 
 #include <math.h>
-#include <iostream>
 #include <fstream>
+#include <iostream>
 
 #include <gtest/gtest.h>
 #include <Eigen/Geometry>
 
-#include "vicon_estimator.h"
 #include "test_helper_library.h"
+#include "vicon_estimator.h"
 
 // Translational trajectory defines
 #define TRANS_TRAJECTORY_PERIOD 10.0
@@ -51,7 +51,7 @@
 #define VEL_ERROR_THRESHOLD 0.1
 
 #define QUAT_ERROR_THRESHOLD 0.005
-#define OMEGA_ERROR_THRESHOLD 1.0
+#define OMEGA_ERROR_THRESHOLD 1.5
 
 /*
  *  Helper Function Tests
@@ -73,9 +73,10 @@ double* q3, double* q4);
  *  Translational Estimator Tests
  */
 
-void generateTranslationalTrajectorySinusoidal(double position_trajectory[][3],
+void generateTranslationalTrajectorySinusoidal(const int trajectory_length,
+                                               double position_trajectory[][3],
                                                double velocity_trajectory[][3],
-                                               const int trajectory_length) {
+                                               double timestamps[]) {
   // Generating position trajectories
   for (int i = 0; i < trajectory_length; i++) {
     position_trajectory[i][0] =
@@ -106,6 +107,11 @@ void generateTranslationalTrajectorySinusoidal(double position_trajectory[][3],
         cos(2 * M_PI * i * TRANS_TRAJECTORY_DT * TRANS_TRAJECTORY_FREQ +
             TRANS_TRAJECTORY_PHASE_OFFSET_Z);
   }
+  // Generating the timestamps
+  timestamps[0] = 0.0;
+  for (int i = 1; i < trajectory_length; i++) {
+    timestamps[i] = timestamps[i - 1] + TRANS_TRAJECTORY_DT;
+  }
 }
 
 TEST(translationalEstimator, sinusoidal_clean) {
@@ -115,7 +121,6 @@ TEST(translationalEstimator, sinusoidal_clean) {
   // Setting the estimator gains
   vicon_estimator::TranslationalEstimatorParameters
       translational_estimator_parameters;
-  translational_estimator_parameters.dt_ = TRANS_TRAJECTORY_DT;
   translational_estimator_parameters.kp_ = 1.0;
   translational_estimator_parameters.kv_ = 10 * 10.0;
   translational_estimator.setParameters(translational_estimator_parameters);
@@ -126,8 +131,9 @@ TEST(translationalEstimator, sinusoidal_clean) {
       static_cast<int>(TRANS_TRAJECTORY_PERIOD / TRANS_TRAJECTORY_DT) + 1;
   double position_trajectory[trajectory_length][3];
   double velocity_trajectory[trajectory_length][3];
+  double timestamps[trajectory_length];
   generateTranslationalTrajectorySinusoidal(
-      position_trajectory, velocity_trajectory, trajectory_length);
+      trajectory_length, position_trajectory, velocity_trajectory, timestamps);
 
   // Looping over trajectory and retrieving estimates
   double position_trajectory_estimate[trajectory_length][3];
@@ -136,8 +142,9 @@ TEST(translationalEstimator, sinusoidal_clean) {
     // Constructing input
     Eigen::Vector3d input(position_trajectory[i][0], position_trajectory[i][1],
                           position_trajectory[i][2]);
+    double timestamp = timestamps[i];
     // Updating the estimate with the measurement
-    translational_estimator.updateEstimate(input);
+    translational_estimator.updateEstimate(input, timestamp);
     // Getting the position and velocity estimates
     Eigen::Vector3d estimated_position =
         translational_estimator.getEstimatedPosition();
@@ -220,9 +227,10 @@ TEST(translationalEstimator, sinusoidal_clean) {
  *  Rotational Estimator Tests
  */
 
-void generateRotationalTrajectorySinusoidal(double orientation_trajectory[][4],
+void generateRotationalTrajectorySinusoidal(const int trajectory_length,
+                                            double orientation_trajectory[][4],
                                             double rollrate_trajectory[][3],
-                                            const int trajectory_length) {
+                                            double timestamps[]) {
   // Generating quaternion trajectories
   double roll, pitch, yaw;
   for (int i = 0; i < trajectory_length; i++) {
@@ -260,6 +268,12 @@ void generateRotationalTrajectorySinusoidal(double orientation_trajectory[][4],
     rollrate_trajectory[i][1] = omega.y();
     rollrate_trajectory[i][2] = omega.z();
   }
+
+  // Generating the timestamps
+  timestamps[0] = 0.0;
+  for (int i = 1; i < trajectory_length; i++) {
+    timestamps[i] = timestamps[i - 1] + TRANS_TRAJECTORY_DT;
+  }
 }
 
 TEST(rotationalEstimator, sinusoidal_clean) {
@@ -269,7 +283,6 @@ TEST(rotationalEstimator, sinusoidal_clean) {
   // Setting the estimator gains
   vicon_estimator::RotationalEstimatorParameters
       rotational_estimator_parameters;
-  rotational_estimator_parameters.dt_ = ROT_TRAJECTORY_DT;
   rotational_estimator_parameters.dorientation_estimate_initial_covariance_ = 1;
   rotational_estimator_parameters.drate_estimate_initial_covariance_ = 1;
   rotational_estimator_parameters.dorientation_process_covariance_ = 0.01;
@@ -281,10 +294,11 @@ TEST(rotationalEstimator, sinusoidal_clean) {
   // Generating the trajectory over which to test the estimator
   const int trajectory_length =
       static_cast<int>(ROT_TRAJECTORY_PERIOD / ROT_TRAJECTORY_DT) + 1;
-  double orientation_trajectory[trajectory_length][4],
-      omega_trajectory[trajectory_length][3];
-  generateRotationalTrajectorySinusoidal(orientation_trajectory,
-                                         omega_trajectory, trajectory_length);
+  double orientation_trajectory[trajectory_length][4];
+  double omega_trajectory[trajectory_length][3];
+  double timestamps[trajectory_length];
+  generateRotationalTrajectorySinusoidal(
+      trajectory_length, orientation_trajectory, omega_trajectory, timestamps);
 
   // Looping over trajectory and retrieving estimates
   double orientation_estimate_trajectory[trajectory_length][4];
@@ -295,7 +309,8 @@ TEST(rotationalEstimator, sinusoidal_clean) {
         orientation_trajectory[i][0], orientation_trajectory[i][1],
         orientation_trajectory[i][2], orientation_trajectory[i][3]);
     // Updating the estimate with the measurement
-    rotational_estimator.updateEstimate(input);
+    double timestamp = timestamps[i];
+    rotational_estimator.updateEstimate(input, timestamp);
     // Getting the position and velocity estimates
     Eigen::Quaterniond estimated_orientation =
         rotational_estimator.getEstimatedOrientation();
@@ -422,7 +437,6 @@ TEST(rotationalEstimator, sinusoidal_corrupted) {
   // Setting the estimator gains
   vicon_estimator::RotationalEstimatorParameters
       rotational_estimator_parameters;
-  rotational_estimator_parameters.dt_ = ROT_TRAJECTORY_DT;
   rotational_estimator_parameters.dorientation_estimate_initial_covariance_ = 1;
   rotational_estimator_parameters.drate_estimate_initial_covariance_ = 1;
   rotational_estimator_parameters.dorientation_process_covariance_ = 0.01;
@@ -434,10 +448,11 @@ TEST(rotationalEstimator, sinusoidal_corrupted) {
   // Generating the trajectory over which to test the estimator
   const int trajectory_length =
       static_cast<int>(ROT_TRAJECTORY_PERIOD / ROT_TRAJECTORY_DT) + 1;
-  double orientation_trajectory[trajectory_length][4],
-      omega_trajectory[trajectory_length][3];
-  generateRotationalTrajectorySinusoidal(orientation_trajectory,
-                                         omega_trajectory, trajectory_length);
+  double orientation_trajectory[trajectory_length][4];
+  double omega_trajectory[trajectory_length][3];
+  double timestamps[trajectory_length];
+  generateRotationalTrajectorySinusoidal(
+      trajectory_length, orientation_trajectory, omega_trajectory, timestamps);
 
   // Constructing the measurement vector
   Eigen::Quaterniond clean_input_trajectory[trajectory_length];
@@ -461,7 +476,8 @@ TEST(rotationalEstimator, sinusoidal_corrupted) {
   double rollrate_estimate_trajectory[trajectory_length][3];
   for (int i = 0; i < trajectory_length; i++) {
     // Updating the estimate with the measurement
-    rotational_estimator.updateEstimate(corrupted_input_trajectory[i]);
+    rotational_estimator.updateEstimate(corrupted_input_trajectory[i],
+                                        timestamps[i]);
     // Getting the position and velocity estimates
     Eigen::Quaterniond estimated_orientation =
         rotational_estimator.getEstimatedOrientation();

@@ -4,7 +4,7 @@
     <param name="vrpn_server_ip" value="vicon" />
     <param name="vrpn_coordinate_system" value="vicon" />
     <param name="timestamping_system" value="tracker" />
-    <param name="object_name" value="$(arg mav_name)" />
+    <param name="object_name" value="$(arg object_name)" />
     <param name="verbose" value="true" />
     <param name="translational_estimator/kp" value="0.5" />
     <param name="translational_estimator/kv" value="0.5" />

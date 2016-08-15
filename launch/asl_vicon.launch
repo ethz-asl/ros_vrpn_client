@@ -3,7 +3,7 @@
   <node ns="$(arg object_name)" name="vrpn_client" type="ros_vrpn_client" pkg="ros_vrpn_client" output="screen">
     <param name="vrpn_server_ip" value="vicon" />
     <param name="vrpn_coordinate_system" value="vicon" />
-    <param name="timestamping_system" value="tracker" />
+    <param name="timestamping_system" value="ros" />
     <param name="object_name" value="$(arg object_name)" />
     <param name="verbose" value="true" />
     <param name="translational_estimator/kp" value="0.5" />

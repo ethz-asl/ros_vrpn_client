@@ -92,7 +92,6 @@ std::string object_name;
 std::string vrpn_frame_id;
 std::string coordinate_system_string;
 bool publish_pose_twist;
-bool publish_for_vision;
 
 // Global indicating the availability of new VRPN callback function.
 bool fresh_data = false;
@@ -362,28 +361,6 @@ void VRPN_CALLBACK track_target(void*, const vrpn_TRACKERCB tracker) {
       orientation_estimate_B_W.toRotationMatrix().transpose() *
       velocity_estimate_W;
 
-  if ( publish_for_vision )
-  {
-    // Static quaternion needed for rotating between aircraft and base_link frames
-    // +PI rotation around X (Forward) axis transforms from Forward, Right, Down (aircraft)
-    // Fto Forward, Left, Up (base_link) frames.
-    static const Eigen::Quaterniond AIRCRAFT_BASELINK_Q = quaternion_from_rpy( M_PI, 0.0, 0.0 );
-    // Static quaternion needed for rotating between ENU and NED frames
-    // +PI rotation around X (North) axis follwed by +PI/2 rotation about Z (Down)
-    // gives the ENU frame.  Similarly, a +PI rotation about X (East) followed by
-    // a +PI/2 roation about Z (Up) gives the NED frame.
-    static const Eigen::Quaterniond NED_ENU_Q = quaternion_from_rpy( M_PI, 0.0, M_PI_2 );
-
-    // Taken from mavros/mocap_pose_estimate plugin
-    // to convert from Mocap to body frame
-    
-    position_estimate_W = Eigen::Affine3d(NED_ENU_Q) * position_estimate_W;
-    velocity_estimate_W = Eigen::Affine3d(NED_ENU_Q) * velocity_estimate_W;
-    
-    orientation_estimate_B_W = NED_ENU_Q * orientation_estimate_B_W * AIRCRAFT_BASELINK_Q;
-    rate_estimate_B = quaternion_to_rpy( NED_ENU_Q * quaternion_from_rpy(rate_estimate_B) * AIRCRAFT_BASELINK_Q );
-  }
-
   // Populate the raw measured transform message. Published in main loop.
   target_state->measured_transform.header.stamp = timestamp;
   target_state->measured_transform.header.frame_id = vrpn_frame_id;
@@ -460,7 +437,6 @@ int main(int argc, char* argv[]) {
                                 timestamping_system_string, "tracker");
   private_nh.param<bool>("display_time_delay", display_time_delay, true);
   private_nh.param<bool>("publish_pose_twist", publish_pose_twist, false);
-  private_nh.param<bool>("publish_for_vision", publish_for_vision, false);
   private_nh.param<std::string>("vrpn_frame_id", vrpn_frame_id, coordinate_system_string);
 
   // Debug output

@@ -425,8 +425,10 @@ int main(int argc, char* argv[]) {
   // Retrieving control parameters
   std::string vrpn_server_ip;
   int vrpn_port;
+  double loop_rate_hz;
   std::string trackedObjectName;
   std::string timestamping_system_string;
+  private_nh.param<double>("loop_rate_hz", loop_rate_hz, 1000 );
   private_nh.param<std::string>("vrpn_server_ip", vrpn_server_ip,
                                 std::string());
   private_nh.param<int>("vrpn_port", vrpn_port, 3883);
@@ -480,7 +482,7 @@ int main(int argc, char* argv[]) {
   // Creating object which handles data publishing
   Rigid_Body tool(private_nh, vrpn_server_ip, vrpn_port, object_name);
 
-  ros::Rate loop_rate(1000);  // TODO(gohlp): fix this
+  ros::Rate loop_rate(loop_rate_hz);
 
   while (ros::ok()) {
     tool.step_vrpn();

@@ -95,7 +95,6 @@ class ViconDataListener {
     // Creating estimated pose message
     geometry_msgs::PoseStamped estimated_pose;
     estimated_pose.header = msg->header;
-    estimated_pose.header.frame_id = object_name_;
     tf::pointEigenToMsg(position_estimate_W,
                         estimated_pose.pose.position);
     tf::quaternionEigenToMsg(orientation_estimate_B_W,

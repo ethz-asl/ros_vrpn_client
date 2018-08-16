@@ -430,6 +430,8 @@ int main(int argc, char* argv[]) {
     timestamping_system = TimestampingSystem::kTrackerStamp;
   } else if (timestamping_system_string == "ros") {
     timestamping_system = TimestampingSystem::kRosStamp;
+  } else if (timestamping_system_string == "cuckoo") {
+    timestamping_system = TimestampingSystem::kCuckooStamp;
   } else {
     ROS_FATAL(
         "ROS param timestamping_system should be either 'tracker' or 'ros'!");

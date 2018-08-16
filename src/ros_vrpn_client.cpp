@@ -224,14 +224,7 @@ void inline getTimeStamp(const ros::Time& vicon_stamp, ros::Time* timestamp) {
   //          in the tracker software. These delay hours are removed in this
   //          function.
   // ros:     Stamp the message on arrival with the current ros time.
-
-
-    std::cout << "timestamping_system:" << timestamping_system << std::endl;
-
-
   switch (timestamping_system) {
-
-
     case kTrackerStamp: {
       // Retreiving current ROS Time
       ros::Time ros_stamp = ros::Time::now();
@@ -257,18 +250,14 @@ void inline getTimeStamp(const ros::Time& vicon_stamp, ros::Time* timestamp) {
         ROS_WARN_STREAM_THROTTLE(kMaxMessagePeriod,
                                  "Time delay: " << time_diff_corrected.toSec());
       }
+      break;
     }
     case kRosStamp: {
       // Just attach the current ROS timestamp
       *timestamp = ros::Time::now();
-
-      std::cout << "here" << std::endl;
-
+      break;
     }
     case kCuckooStamp: {
-
-      std::cout << "here2" << std::endl;
-
       // Initializing
       if (!device_time_translator) {
         device_time_translator.reset(
@@ -291,6 +280,7 @@ void inline getTimeStamp(const ros::Time& vicon_stamp, ros::Time* timestamp) {
             "ros::Time::now()");
         *timestamp = ros::Time::now();
       }
+      break;
     }
   }
 }
@@ -440,8 +430,6 @@ int main(int argc, char* argv[]) {
     timestamping_system = TimestampingSystem::kTrackerStamp;
   } else if (timestamping_system_string == "ros") {
     timestamping_system = TimestampingSystem::kRosStamp;
-  } else if (timestamping_system_string == "cuckoo") {
-    timestamping_system = TimestampingSystem::kCuckooStamp;
   } else {
     ROS_FATAL(
         "ROS param timestamping_system should be either 'tracker' or 'ros'!");

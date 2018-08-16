@@ -245,10 +245,12 @@ void inline getTimeStamp(const ros::Time& vicon_stamp, ros::Time* timestamp) {
         ROS_WARN_STREAM_THROTTLE(kMaxMessagePeriod,
                                  "Time delay: " << time_diff_corrected.toSec());
       }
+      break;
     }
     case kRosStamp: {
       // Just attach the current ROS timestamp
       *timestamp = ros::Time::now();
+      break;
     }
   }
 }

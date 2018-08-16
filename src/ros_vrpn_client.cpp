@@ -54,6 +54,8 @@
 #include <tf/transform_broadcaster.h>
 #include <glog/logging.h>
 
+#include <cuckoo_time_translator/DeviceTimeTranslator.h>
+
 #include "vicon_odometry_estimator.h"
 
 void VRPN_CALLBACK track_target(void*, const vrpn_TRACKERCB tracker);
@@ -80,7 +82,7 @@ struct TargetState {
 enum CoordinateSystem { kVicon, kOptitrack } coordinate_system;
 
 // Available timestamping options.
-enum TimestampingSystem { kTrackerStamp, kRosStamp } timestamping_system;
+enum TimestampingSystem { kTrackerStamp, kRosStamp, kCuckooStamp } timestamping_system;
 
 // Global target descriptions.
 TargetState* target_state;
@@ -97,6 +99,9 @@ bool display_time_delay = true;
 // Pointer to the vicon estimator. Global such that it can be accessed from the
 // callback.
 vicon_estimator::ViconOdometryEstimator* vicon_odometry_estimator = NULL;
+
+// Global time translator device
+std::unique_ptr<cuckoo_time_translator::UnwrappedDeviceTimeTranslator> device_time_translator;
 
 class Rigid_Body {
  public:
@@ -219,7 +224,14 @@ void inline getTimeStamp(const ros::Time& vicon_stamp, ros::Time* timestamp) {
   //          in the tracker software. These delay hours are removed in this
   //          function.
   // ros:     Stamp the message on arrival with the current ros time.
+
+
+    std::cout << "timestamping_system:" << timestamping_system << std::endl;
+
+
   switch (timestamping_system) {
+
+
     case kTrackerStamp: {
       // Retreiving current ROS Time
       ros::Time ros_stamp = ros::Time::now();
@@ -249,6 +261,36 @@ void inline getTimeStamp(const ros::Time& vicon_stamp, ros::Time* timestamp) {
     case kRosStamp: {
       // Just attach the current ROS timestamp
       *timestamp = ros::Time::now();
+
+      std::cout << "here" << std::endl;
+
+    }
+    case kCuckooStamp: {
+
+      std::cout << "here2" << std::endl;
+
+      // Initializing
+      if (!device_time_translator) {
+        device_time_translator.reset(
+            new cuckoo_time_translator::UnwrappedDeviceTimeTranslator(
+                cuckoo_time_translator::ClockParameters(1e9), "vicon",
+                cuckoo_time_translator::Defaults().setFilterAlgorithm(
+                    cuckoo_time_translator::FilterAlgorithm::ConvexHull)));
+      }
+
+      // Updating the translator
+      ros::Time ros_stamp = ros::Time::now();
+      device_time_translator->update(vicon_stamp.toNSec(), ros_stamp);
+
+      // Checking the translator
+      if (device_time_translator->isReadyToTranslate()) {
+        *timestamp = device_time_translator->translate(vicon_stamp.toNSec());
+      } else {
+        ROS_WARN(
+            "device_time_translator is not ready yet, using "
+            "ros::Time::now()");
+        *timestamp = ros::Time::now();
+      }
     }
   }
 }
@@ -398,6 +440,8 @@ int main(int argc, char* argv[]) {
     timestamping_system = TimestampingSystem::kTrackerStamp;
   } else if (timestamping_system_string == "ros") {
     timestamping_system = TimestampingSystem::kRosStamp;
+  } else if (timestamping_system_string == "cuckoo") {
+    timestamping_system = TimestampingSystem::kCuckooStamp;
   } else {
     ROS_FATAL(
         "ROS param timestamping_system should be either 'tracker' or 'ros'!");

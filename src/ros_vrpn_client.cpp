@@ -50,6 +50,8 @@
 #include <Eigen/Geometry>
 #include <eigen_conversions/eigen_msg.h>
 #include <nav_msgs/Odometry.h>
+#include <geometry_msgs/PoseStamped.h>
+#include <geometry_msgs/TwistStamped.h>
 #include <geometry_msgs/TransformStamped.h>
 #include <tf/transform_broadcaster.h>
 #include <glog/logging.h>
@@ -74,6 +76,8 @@ struct TargetState {
   geometry_msgs::TransformStamped measured_transform;
   geometry_msgs::TransformStamped estimated_transform;
   nav_msgs::Odometry estimated_odometry;
+  geometry_msgs::PoseStamped estimated_pose;
+  geometry_msgs::TwistStamped estimated_speed;
 };
 
 // Available coordinate systems.
@@ -85,7 +89,9 @@ enum TimestampingSystem { kTrackerStamp, kRosStamp } timestamping_system;
 // Global target descriptions.
 TargetState* target_state;
 std::string object_name;
+std::string vrpn_frame_id;
 std::string coordinate_system_string;
+bool publish_pose_twist;
 
 // Global indicating the availability of new VRPN callback function.
 bool fresh_data = false;
@@ -108,8 +114,18 @@ class Rigid_Body {
         nh.advertise<geometry_msgs::TransformStamped>("raw_transform", 1);
     estimated_target_transform_pub_ =
         nh.advertise<geometry_msgs::TransformStamped>("estimated_transform", 1);
+    if (publish_pose_twist)
+    {
+    estimated_target_pose_pub_ =
+        nh.advertise<geometry_msgs::PoseStamped>("estimated_pose", 1);
+    estimated_target_speed_pub_ =
+        nh.advertise<geometry_msgs::TwistStamped>("estimated_speed", 1);
+    }
+    else
+    {
     estimated_target_odometry_pub_ =
         nh.advertise<nav_msgs::Odometry>("estimated_odometry", 1);
+    }
     // Connecting to the vprn device and creating an associated tracker.
     std::stringstream connection_name;
     connection_name << server_ip << ":" << port;
@@ -144,6 +160,16 @@ class Rigid_Body {
     estimated_target_odometry_pub_.publish(target_state->estimated_odometry);
   }
 
+  // Publishes the estimated target state to the pose message.
+  void publish_estimated_pose(TargetState* target_state) {
+    estimated_target_pose_pub_.publish(target_state->estimated_pose);
+  }
+
+  // Publishes the estimated target state to the twist message.
+  void publish_estimated_speed(TargetState* target_state) {
+    estimated_target_speed_pub_.publish(target_state->estimated_speed);
+  }
+
   // Passes contol to the vrpn client.
   void step_vrpn() {
     this->tracker->mainloop();
@@ -155,6 +181,8 @@ class Rigid_Body {
   ros::Publisher measured_target_transform_pub_;
   ros::Publisher estimated_target_transform_pub_;
   ros::Publisher estimated_target_odometry_pub_;
+  ros::Publisher estimated_target_pose_pub_;
+  ros::Publisher estimated_target_speed_pub_;
   tf::TransformBroadcaster br;
   // Vprn object pointers
   vrpn_Connection* connection;
@@ -267,6 +295,26 @@ bool inline tracker_is_equal(const vrpn_TRACKERCB& vprn_data_1,
           vprn_data_1.pos[2] == vprn_data_2.pos[2]);
 }
 
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+
+Eigen::Quaterniond quaternion_from_rpy( double roll, double pitch, double yaw )
+{
+	return Eigen::Quaterniond(
+			Eigen::AngleAxisd( yaw,     Eigen::Vector3d::UnitZ() ) *
+			Eigen::AngleAxisd( pitch,   Eigen::Vector3d::UnitY() ) *
+			Eigen::AngleAxisd( roll,    Eigen::Vector3d::UnitX() ) );
+}
+
+Eigen::Quaterniond quaternion_from_rpy( const Eigen::Vector3d& rpy )
+    { return quaternion_from_rpy( rpy.x(), rpy.y(), rpy.z() ); }
+
+Eigen::Vector3d quaternion_to_rpy( const Eigen::Quaterniond& q )
+    { return q.toRotationMatrix().eulerAngles(2,1,0).reverse(); }
+
+////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+
 // Tracker Position/Orientation Callback
 void VRPN_CALLBACK track_target(void*, const vrpn_TRACKERCB tracker) {
   // Constructing the raw measured target pose variables.
@@ -317,7 +365,7 @@ void VRPN_CALLBACK track_target(void*, const vrpn_TRACKERCB tracker) {
 
   // Populate the raw measured transform message. Published in main loop.
   target_state->measured_transform.header.stamp = timestamp;
-  target_state->measured_transform.header.frame_id = coordinate_system_string;
+  target_state->measured_transform.header.frame_id = vrpn_frame_id;
   target_state->measured_transform.child_frame_id = object_name;
   tf::vectorEigenToMsg(position_measured_W,
                        target_state->measured_transform.transform.translation);
@@ -326,7 +374,7 @@ void VRPN_CALLBACK track_target(void*, const vrpn_TRACKERCB tracker) {
 
   // Populate the estimated transform message. Published in main loop.
   target_state->estimated_transform.header.stamp = timestamp;
-  target_state->estimated_transform.header.frame_id = coordinate_system_string;
+  target_state->estimated_transform.header.frame_id = vrpn_frame_id;
   target_state->estimated_transform.child_frame_id = object_name;
   tf::vectorEigenToMsg(position_estimate_W,
                        target_state->estimated_transform.transform.translation);
@@ -336,7 +384,7 @@ void VRPN_CALLBACK track_target(void*, const vrpn_TRACKERCB tracker) {
 
   // Populate the estimated odometry message. Published in main loop.
   target_state->estimated_odometry.header.stamp = timestamp;
-  target_state->estimated_odometry.header.frame_id = coordinate_system_string;
+  target_state->estimated_odometry.header.frame_id = vrpn_frame_id;
   target_state->estimated_odometry.child_frame_id = object_name;
   tf::pointEigenToMsg(position_estimate_W,
                       target_state->estimated_odometry.pose.pose.position);
@@ -347,6 +395,23 @@ void VRPN_CALLBACK track_target(void*, const vrpn_TRACKERCB tracker) {
                        target_state->estimated_odometry.twist.twist.linear);
   tf::vectorEigenToMsg(rate_estimate_B,
                        target_state->estimated_odometry.twist.twist.angular);
+
+  // Populate the estimated pose message. Published in main loop.
+  target_state->estimated_pose.header.stamp = timestamp;
+  target_state->estimated_pose.header.frame_id = vrpn_frame_id;
+  tf::pointEigenToMsg(position_estimate_W,
+                      target_state->estimated_pose.pose.position);
+  tf::quaternionEigenToMsg(
+      orientation_estimate_B_W,
+      target_state->estimated_pose.pose.orientation);
+  
+  // Populate the estimated speed message. Published in main loop.
+  target_state->estimated_speed.header.stamp = timestamp;
+  target_state->estimated_speed.header.frame_id = vrpn_frame_id;
+  tf::vectorEigenToMsg(velocity_estimate_B,
+                       target_state->estimated_speed.twist.linear);
+  tf::vectorEigenToMsg(rate_estimate_B,
+                       target_state->estimated_speed.twist.angular);
 
   // Indicating to the main loop the data is ready for publishing.
   fresh_data = true;
@@ -362,8 +427,10 @@ int main(int argc, char* argv[]) {
   // Retrieving control parameters
   std::string vrpn_server_ip;
   int vrpn_port;
+  double loop_rate_hz;
   std::string trackedObjectName;
   std::string timestamping_system_string;
+  private_nh.param<double>("loop_rate_hz", loop_rate_hz, 1000 );
   private_nh.param<std::string>("vrpn_server_ip", vrpn_server_ip,
                                 std::string());
   private_nh.param<int>("vrpn_port", vrpn_port, 3883);
@@ -373,6 +440,8 @@ int main(int argc, char* argv[]) {
   private_nh.param<std::string>("timestamping_system",
                                 timestamping_system_string, "tracker");
   private_nh.param<bool>("display_time_delay", display_time_delay, true);
+  private_nh.param<bool>("publish_pose_twist", publish_pose_twist, false);
+  private_nh.param<std::string>("vrpn_frame_id", vrpn_frame_id, coordinate_system_string);
 
   // Debug output
   std::cout << "vrpn_server_ip:" << vrpn_server_ip << std::endl;
@@ -415,7 +484,7 @@ int main(int argc, char* argv[]) {
   // Creating object which handles data publishing
   Rigid_Body tool(private_nh, vrpn_server_ip, vrpn_port, object_name);
 
-  ros::Rate loop_rate(1000);  // TODO(gohlp): fix this
+  ros::Rate loop_rate(loop_rate_hz);
 
   while (ros::ok()) {
     tool.step_vrpn();
@@ -424,7 +493,12 @@ int main(int argc, char* argv[]) {
     if (fresh_data == true) {
       tool.publish_measured_transform(target_state);
       tool.publish_estimated_transform(target_state);
-      tool.publish_estimated_odometry(target_state);
+      if (publish_pose_twist)
+      {
+        tool.publish_estimated_pose(target_state);
+        tool.publish_estimated_speed(target_state);
+      }
+      else tool.publish_estimated_odometry(target_state);
       fresh_data = false;
     }
     loop_rate.sleep();

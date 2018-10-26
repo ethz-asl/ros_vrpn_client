@@ -96,6 +96,7 @@ EstimatorStatus TranslationalEstimator::updateEstimate(
   if (first_measurement_flag_) {
     first_measurement_flag_ = false;
     last_timestamp_ = timestamp;
+    pos_measured_old_ = pos_measured_W;
     position_estimate_W_ = pos_measured_W;
     return EstimatorStatus::OK;
   }
@@ -103,38 +104,58 @@ EstimatorStatus TranslationalEstimator::updateEstimate(
   double dt = timestamp - last_timestamp_;
   last_timestamp_ = timestamp;
 
-  // Saving the measurement to the intermediate results
-  estimator_results_.position_measured_ = pos_measured_W;
-  // Saving the old state to the intermediate results
-  estimator_results_.position_old_ = position_estimate_W_;
-  estimator_results_.velocity_old_ = velocity_estimate_W_;
-  // Constructing the full state
-  Eigen::Matrix<double, 6, 1> x_estimate;
-  x_estimate << position_estimate_W_, velocity_estimate_W_;
-  // Constructing the system matrix
-  Eigen::Matrix<double, 6, 6> A;
-  A.setZero();
-  A.block<3, 3>(0, 0) = Eigen::Matrix3d::Identity();
-  A.block<3, 3>(3, 3) = Eigen::Matrix3d::Identity();
-  A.block<3, 3>(0, 3) = dt * Eigen::Matrix3d::Identity();
-  // Constructing the measurement matrix
-  Eigen::Matrix<double, 3, 6> C;
-  C.setZero();
-  C.block<3, 3>(0, 0) = Eigen::Matrix3d::Identity();
-  // Constructing the Luenberger gain matrix
-  Eigen::Matrix<double, 6, 3> L_gain;
-  L_gain << estimator_parameters_.kp_ * Eigen::Matrix3d::Identity(),
-      estimator_parameters_.kv_ * Eigen::Matrix3d::Identity();
-  // Correction using the Luenberger equations + gain
-  x_estimate = (A - L_gain * C * A) * x_estimate + L_gain * pos_measured_W;
-  // Extracting state components
-  position_estimate_W_ = x_estimate.block<3, 1>(0, 0);
-  velocity_estimate_W_ = x_estimate.block<3, 1>(3, 0);
-  // Saving estimate to intermediate results
-  estimator_results_.position_estimate_ = position_estimate_W_;
-  estimator_results_.velocity_estimate_ = velocity_estimate_W_;
-  // TODO(alexmillane): No outlier rejection yet implemented
-  return EstimatorStatus::OK;
+  // Detecting outlier measurements
+  bool measurement_update_flag;
+  if (detectMeasurementOutlierSubsequent(pos_measured_W)) {
+    measurement_update_flag = false;
+  } else {
+    measurement_update_flag = true;
+  }
+
+  // If no outlier detected do measurement update
+  if (measurement_update_flag) {
+    // Saving the measurement to the intermediate results
+    estimator_results_.position_measured_ = pos_measured_W;
+    // Saving the old state to the intermediate results
+    estimator_results_.position_old_ = position_estimate_W_;
+    estimator_results_.velocity_old_ = velocity_estimate_W_;
+    // Constructing the full state
+    Eigen::Matrix<double, 6, 1> x_estimate;
+    x_estimate << position_estimate_W_, velocity_estimate_W_;
+    // Constructing the system matrix
+    Eigen::Matrix<double, 6, 6> A;
+    A.setZero();
+    A.block<3, 3>(0, 0) = Eigen::Matrix3d::Identity();
+    A.block<3, 3>(3, 3) = Eigen::Matrix3d::Identity();
+    A.block<3, 3>(0, 3) = dt * Eigen::Matrix3d::Identity();
+    // Constructing the measurement matrix
+    Eigen::Matrix<double, 3, 6> C;
+    C.setZero();
+    C.block<3, 3>(0, 0) = Eigen::Matrix3d::Identity();
+    // Constructing the Luenberger gain matrix
+    Eigen::Matrix<double, 6, 3> L_gain;
+    L_gain << estimator_parameters_.kp_ * Eigen::Matrix3d::Identity(),
+        estimator_parameters_.kv_ * Eigen::Matrix3d::Identity();
+    // Correction using the Luenberger equations + gain
+    x_estimate = (A - L_gain * C * A) * x_estimate + L_gain * pos_measured_W;
+    // Extracting state components
+    position_estimate_W_ = x_estimate.block<3, 1>(0, 0);
+    velocity_estimate_W_ = x_estimate.block<3, 1>(3, 0);
+    // Saving estimate to intermediate results
+    estimator_results_.position_estimate_ = position_estimate_W_;
+    estimator_results_.velocity_estimate_ = velocity_estimate_W_;
+    // Returning status
+    return EstimatorStatus::OK;
+  }
+  // If outlier detected just write priori estimate to posteriori
+  else {
+    // Global state correction (combining priori global state estimate with
+    // priori error state estimate)
+    estimator_results_.position_estimate_ = estimator_results_.position_old_;
+    estimator_results_.velocity_estimate_ = estimator_results_.velocity_old_;
+    // Return
+    return EstimatorStatus::OUTLIER;
+  }
 }
 
 void TranslationalEstimator::reset() {
@@ -149,6 +170,43 @@ void TranslationalEstimator::reset() {
 void TranslationalEstimator::setParameters(
     const TranslationalEstimatorParameters& estimator_parameters) {
   estimator_parameters_ = estimator_parameters;
+}
+
+bool TranslationalEstimator::detectMeasurementOutlierSubsequent(
+    const Eigen::Vector3d& pos_measured) {
+  // Performing some initialization if this is the first measurement.
+  // Assuming first measurement valid, saving it and returning.
+  if (first_measurement_flag_) {
+    first_measurement_flag_ = false;
+    pos_measured_old_ = pos_measured;
+    return false;
+  }
+
+  // Compare new measurement with old measuerement and constructing error vector
+  Eigen::Vector3d error = (pos_measured_old_ - pos_measured);
+  // Detecting if the measurement is an outlier. If the
+  bool measurement_outlier_flag =
+      (error.norm() >= estimator_parameters_.outlier_threshold_meters_);
+
+  // After a certain number of measurements have been ignored in a row
+  // we assume we've made a mistake and accept the measurement as valid.
+  if (outlier_counter_ >= estimator_parameters_.maximum_outlier_count_) {
+    measurement_outlier_flag = false;
+  }
+
+  // Saving the flag to the intermediate results structure
+  estimator_results_.measurement_outlier_flag_ = measurement_outlier_flag;
+
+  // If rotation too great indicate that measurement is corrupted
+  if (measurement_outlier_flag) {
+    ++outlier_counter_;
+    return true;
+  } else {
+    // If measurement valid. Overwriting the old measurement.
+    pos_measured_old_ = pos_measured;
+    outlier_counter_ = 0;
+    return false;
+  }
 }
 
 /*
@@ -443,9 +501,11 @@ void RotationalEstimator::updateEstimateUpdateErrorEstimate(
              skewMatrix(orientation_estimate_priori_vector),
       -orientation_estimate_priori.vec().transpose();
   H << Hdq, Eigen::Matrix<double, 4, 3>::Zero();
+
   // Calculating the measured error quaternion
   Eigen::Quaterniond error_orientation =
       orientation_measured * orientation_estimate_priori.inverse();
+
   // Calculating the predicted measurement dependant on the sign of the measured
   // error quaternion
   Eigen::Quaterniond orientation_predicted;
@@ -464,10 +524,12 @@ void RotationalEstimator::updateEstimateUpdateErrorEstimate(
         Eigen::Quaterniond(Hdq * dorientation_estimate_priori +
                            orientation_estimate_priori.coeffs());
   }
+
   // Calculating the measurement residual
   Eigen::Vector4d measurement_residual;
   measurement_residual =
       orientation_measured.coeffs() - orientation_predicted.coeffs();
+
   // Computing the Kalman gain
   Eigen::Matrix<double, 4, 4> S =
       H * covariance_priori * H.transpose() + measurement_covariance_;
@@ -499,6 +561,7 @@ void RotationalEstimator::updateEstimateRecombineErrorGlobal(
       dx_measurement->block<3, 1>(0, 0);
   Eigen::Matrix<double, 3, 1> drate_estimate_measurement =
       dx_measurement->block<3, 1>(3, 0);
+
   // Completing the error quaternion
   // The sign real part of the full quaternion was calculated in the error
   // quaternion measurement update step
@@ -514,6 +577,7 @@ void RotationalEstimator::updateEstimateRecombineErrorGlobal(
                            dorientation_estimate_measurement.y(),
                            dorientation_estimate_measurement.z());
   }
+
   // Using estimated error states to correct global estimate states
   Eigen::Quaterniond orientation_estimate_measurement =
       orientation_estimate_priori *

@@ -41,6 +41,11 @@ void ViconOdometryEstimator::initializeParameters(ros::NodeHandle& nh) {
               translationalEstimatorParameters.kp_);
   nh.getParam("translational_estimator/kv",
               translationalEstimatorParameters.kv_);
+  nh.getParam("translational_estimator/outlier_threshold_meters",
+                translationalEstimatorParameters.outlier_threshold_meters_);
+  nh.getParam("translational_estimator/maximum_outlier_count",
+                translationalEstimatorParameters.maximum_outlier_count_);
+
   // Recovering rotational estimator parameters values from the parameter server
   vicon_estimator::RotationalEstimatorParameters rotationalEstimatorParameters;
   nh.getParam(

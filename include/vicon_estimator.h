@@ -39,6 +39,9 @@ enum class OutlierRejectionMethod {
 // values
 static const double kDefaultTranslationalKp = 1.0;
 static const double kDefaultTranslationalKv = 10.0;
+static const double kDefaultOutlierThresholdMeters = 0.5;
+static const int kDefaultMaximumOutlierCountTranslation = 10;
+
 static const Eigen::Vector3d kDefaultInitialPositionEstimate =
     Eigen::Vector3d::Zero();
 static const Eigen::Vector3d kDefaultInitialVelocityEstimate =
@@ -51,11 +54,15 @@ class TranslationalEstimatorParameters {
   TranslationalEstimatorParameters()
       : kp_(kDefaultTranslationalKp),
         kv_(kDefaultTranslationalKv),
+        outlier_threshold_meters_(kDefaultOutlierThresholdMeters),
+        maximum_outlier_count_(kDefaultMaximumOutlierCountTranslation),
         initial_position_estimate_(kDefaultInitialPositionEstimate),
         initial_velocity_estimate_(kDefaultInitialVelocityEstimate) {}
 
   double kp_;
   double kv_;
+  double outlier_threshold_meters_;
+  int maximum_outlier_count_;
   Eigen::Vector3d initial_position_estimate_;
   Eigen::Vector3d initial_velocity_estimate_;
 };
@@ -68,6 +75,7 @@ class TranslationalEstimatorResults {
       : position_measured_(Eigen::Vector3d::Zero()),
         position_old_(Eigen::Vector3d::Zero()),
         velocity_old_(Eigen::Vector3d::Zero()),
+        measurement_outlier_flag_(false),
         position_estimate_(Eigen::Vector3d::Zero()),
         velocity_estimate_(Eigen::Vector3d::Zero()) {}
 
@@ -75,6 +83,7 @@ class TranslationalEstimatorResults {
   Eigen::Vector3d position_measured_;
   Eigen::Vector3d position_old_;
   Eigen::Vector3d velocity_old_;
+  bool measurement_outlier_flag_;
   Eigen::Vector3d position_estimate_;
   Eigen::Vector3d velocity_estimate_;
 };
@@ -86,7 +95,7 @@ class TranslationalEstimator {
   // Constructor
   TranslationalEstimator();
   // Update estimated quantities with new measurement
-  EstimatorStatus updateEstimate(const Eigen::Vector3d& pos_measured,
+  EstimatorStatus updateEstimate(const Eigen::Vector3d& pos_measured_W,
                                  const double timestamp);
   // Reset the estimator
   void reset();
@@ -107,22 +116,26 @@ class TranslationalEstimator {
   TranslationalEstimatorParameters estimator_parameters_;
   TranslationalEstimatorResults estimator_results_;
 
+  // Last measurement
+  Eigen::Vector3d pos_measured_old_;
+  bool first_measurement_flag_;
+  int outlier_counter_;
+  double last_timestamp_;
+
   // Estimates
   Eigen::Vector3d position_estimate_W_;
   Eigen::Vector3d velocity_estimate_W_;
 
-  // Last measurement
-  double last_timestamp_;
-  bool first_measurement_flag_;
+  // Detects if the passed measurement is an outlier
+  bool detectMeasurementOutlierSubsequent(const Eigen::Vector3d& pos_measured);
 };
 
 // The parameter class for the translational estimator and parameter default
 // values
-static const double kDefaultLastTimestamp = -1.0;
-static const double kDefaultdOrientationEstimateInitialCovariance = 1.0;
-static const double kDefaultdRateEstimateInitialCovariance = 1.0;
+static const double kDefaultdOrientationEstimateInitialCovariance = 1;
+static const double kDefaultdRateEstimateInitialCovariance = 1;
 static const double kDefaultdOrientationProcessCovariance = 0.01;
-static const double kDefaultdRateProcessCovariance = 1.0;
+static const double kDefaultdRateProcessCovariance = 1;
 static const double kDefaultOrientationMeasurementCovariance = 0.0005;
 static const Eigen::Quaterniond kDefaultInitialOrientationEstimate =
     Eigen::Quaterniond::Identity();
@@ -138,7 +151,7 @@ static const OutlierRejectionMethod kDefaultOutlierRejectionMethod =
 static const double kDefaultOutlierRejectionMahalanobisThreshold = 5.0;
 
 static const double kDefaultOutlierRejectionSubsequentThresholdDegrees = 30.0;
-static const int kDefaultOutlierRejectionSubsequentMaximumCount = 10.0;
+static const int kDefaultOutlierRejectionSubsequentMaximumCountRotation = 10.0;
 
 static const bool kOutputMinimalQuaternions = false;
 
@@ -165,7 +178,7 @@ class RotationalEstimatorParameters {
         outlier_rejection_subsequent_threshold_degrees_(
             kDefaultOutlierRejectionSubsequentThresholdDegrees),
         outlier_rejection_subsequent_maximum_count_(
-            kDefaultOutlierRejectionSubsequentMaximumCount),
+            kDefaultOutlierRejectionSubsequentMaximumCountRotation),
         output_minimal_quaternions_(kOutputMinimalQuaternions){};
 
   double dorientation_estimate_initial_covariance_;

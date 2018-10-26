@@ -343,7 +343,7 @@ void VRPN_CALLBACK track_target(void*, const vrpn_TRACKERCB tracker) {
   tf::quaternionEigenToMsg(
       orientation_estimate_B_W,
       target_state->estimated_odometry.pose.pose.orientation);
-  tf::vectorEigenToMsg(velocity_estimate_B,
+  tf::vectorEigenToMsg(velocity_estimate_W,
                        target_state->estimated_odometry.twist.twist.linear);
   tf::vectorEigenToMsg(rate_estimate_B,
                        target_state->estimated_odometry.twist.twist.angular);

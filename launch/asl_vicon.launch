@@ -19,5 +19,6 @@
     <param name="rotational_estimator/outlier_rejection_subsequent_maximum_count" value="50.0" />
     <param name="rotational_estimator/output_minimal_quaternions" value="false" />
     <param name="rotational_estimator/output_minimal_quaternions" value="false" />
+    <remap from="vrpn_client/estimated_transform" to="mavros/vicon_pose/vicon_tf"/>
   </node>
 </launch>

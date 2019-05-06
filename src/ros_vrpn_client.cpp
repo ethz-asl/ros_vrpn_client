@@ -51,6 +51,7 @@
 #include <eigen_conversions/eigen_msg.h>
 #include <nav_msgs/Odometry.h>
 #include <geometry_msgs/TransformStamped.h>
+#include <geometry_msgs/Vector3Stamped.h>
 #include <tf/transform_broadcaster.h>
 #include <glog/logging.h>
 
@@ -110,6 +111,7 @@ class Rigid_Body {
         nh.advertise<geometry_msgs::TransformStamped>("estimated_transform", 1);
     estimated_target_odometry_pub_ =
         nh.advertise<nav_msgs::Odometry>("estimated_odometry", 1);
+    estimated_eulerRPY_pub_ = nh.advertise<geometry_msgs::Vector3Stamped>("eulerRPY",1);
     // Connecting to the vprn device and creating an associated tracker.
     std::stringstream connection_name;
     connection_name << server_ip << ":" << port;
@@ -144,6 +146,19 @@ class Rigid_Body {
     estimated_target_odometry_pub_.publish(target_state->estimated_odometry);
   }
 
+  //Publishes the euler angles to the eulerRPY message
+  void publish_euler_angles(TargetState* target_state){
+    geometry_msgs::Vector3Stamped euler_angles;
+    euler_angles.header = target_state->estimated_transform.header;
+    Eigen::Quaterniond rotation;
+    tf::quaternionMsgToEigen(target_state->estimated_transform.transform.rotation, rotation);
+    auto euler = rotation.toRotationMatrix().eulerAngles(0,1,2);
+    euler_angles.vector.x = euler(0);
+    euler_angles.vector.y = euler(1);
+    euler_angles.vector.z = euler(2);
+    estimated_eulerRPY_pub_.publish(euler_angles);
+  }
+
   // Passes contol to the vrpn client.
   void step_vrpn() {
     this->tracker->mainloop();
@@ -155,6 +170,7 @@ class Rigid_Body {
   ros::Publisher measured_target_transform_pub_;
   ros::Publisher estimated_target_transform_pub_;
   ros::Publisher estimated_target_odometry_pub_;
+  ros::Publisher estimated_eulerRPY_pub_;
   tf::TransformBroadcaster br;
   // Vprn object pointers
   vrpn_Connection* connection;
@@ -425,6 +441,7 @@ int main(int argc, char* argv[]) {
       tool.publish_measured_transform(target_state);
       tool.publish_estimated_transform(target_state);
       tool.publish_estimated_odometry(target_state);
+      tool.publish_euler_angles(target_state);
       fresh_data = false;
     }
     loop_rate.sleep();

@@ -152,7 +152,7 @@ class Rigid_Body {
     euler_angles.header = target_state->estimated_transform.header;
     Eigen::Quaterniond rotation;
     tf::quaternionMsgToEigen(target_state->estimated_transform.transform.rotation, rotation);
-    auto euler = rotation.toRotationMatrix().eulerAngles(0,1,2);
+    auto euler = convert_eigen_quaternion_to_roll_pitch_yaw(rotation);
     euler_angles.vector.x = euler(0);
     euler_angles.vector.y = euler(1);
     euler_angles.vector.z = euler(2);
@@ -175,6 +175,20 @@ class Rigid_Body {
   // Vprn object pointers
   vrpn_Connection* connection;
   vrpn_Tracker_Remote* tracker;
+  // this function converts the eigen quaternion to euler angles (standard yaw, pitch, roll sequence)
+  Eigen::Vector3d convert_eigen_quaternion_to_roll_pitch_yaw(Eigen::Quaterniond in)
+  {
+    const auto x = in.x();    
+    const auto y = in.y();    
+    const auto z = in.z();    
+    const auto w = in.w();
+    Eigen::Vector3d vector;
+
+    vector(0) = atan2(2.0*y*z + 2.0*w*x, z*z - y*y - x*x + w*w);
+    vector(1) = -asin(2.0*x*z - 2.0*w*y);
+    vector(2) = atan2(2*x*y + 2*w*z,x*x + w*w - z*z - y*y);       
+    return vector;
+  }
 };
 
 // TODO(millanea@ethz.ch): The following callbacks should be implemented if
@@ -191,6 +205,7 @@ class Rigid_Body {
 //  std::cout<<"velocity_callback"<<std::endl;
 //  std::cout<<"tv.vel[0]"<<tv.vel[0]<<std::endl;
 //}
+
 
 // Corrects measured target orientation and position for differing frame
 // definitions.

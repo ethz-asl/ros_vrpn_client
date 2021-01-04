@@ -54,6 +54,10 @@
 #include <tf/transform_broadcaster.h>
 #include <glog/logging.h>
 
+#include <memory>
+#include <cuckoo_time_translator/ClockParameters.h>
+#include <cuckoo_time_translator/DeviceTimeTranslator.h>
+
 #include "vicon_odometry_estimator.h"
 
 void VRPN_CALLBACK track_target(void*, const vrpn_TRACKERCB tracker);
@@ -80,7 +84,12 @@ struct TargetState {
 enum CoordinateSystem { kVicon, kOptitrack } coordinate_system;
 
 // Available timestamping options.
-enum TimestampingSystem { kTrackerStamp, kRosStamp } timestamping_system;
+enum TimestampingSystem { kTrackerStamp,
+  kRosStamp,
+  kTranslation
+} timestamping_system;
+
+std::shared_ptr<cuckoo_time_translator::DefaultDeviceTimeUnwrapperAndTranslator> device_time_translator;
 
 // Global target descriptions.
 TargetState* target_state;
@@ -252,6 +261,11 @@ void inline getTimeStamp(const ros::Time& vicon_stamp, ros::Time* timestamp) {
       *timestamp = ros::Time::now();
       break;
     }
+    case kTranslation: {
+      if(device_time_translator) {
+        *timestamp = device_time_translator->update(vicon_stamp.toNSec(), ros::Time::now(), 0.0);
+      }
+    }
   }
 }
 
@@ -296,7 +310,7 @@ void VRPN_CALLBACK track_target(void*, const vrpn_TRACKERCB tracker) {
   vicon_odometry_estimator->updateEstimate(position_measured_W,
                                           orientation_measured_B_W,
                                           timestamp);
-  Eigen::Vector3d position_estimate_W = 
+  Eigen::Vector3d position_estimate_W =
       vicon_odometry_estimator->getEstimatedPosition();
   Eigen::Vector3d velocity_estimate_W =
       vicon_odometry_estimator->getEstimatedVelocity();
@@ -400,9 +414,27 @@ int main(int argc, char* argv[]) {
     timestamping_system = TimestampingSystem::kTrackerStamp;
   } else if (timestamping_system_string == "ros") {
     timestamping_system = TimestampingSystem::kRosStamp;
+  } else if (timestamping_system_string == "translation") {
+    timestamping_system = TimestampingSystem::kTranslation;
+
+    const bool kAppendDeviceTimeSubnamespace = true;
+    const double kSwitchingTime = 100.0; // s
+    const uint64_t kOverflow = 0xFFFFFFFFFFFFFFFF;  // 64 bit
+    const double kClockFrequency = 1e9;          // nanoseconds
+
+    cuckoo_time_translator::Defaults defaults;
+    defaults.setFilterAlgorithm(
+        cuckoo_time_translator::FilterAlgorithm(
+          cuckoo_time_translator::FilterAlgorithm::Type::ConvexHull));
+    defaults.setSwitchTimeSecs(kSwitchingTime);
+    device_time_translator.reset(
+    new cuckoo_time_translator::DefaultDeviceTimeUnwrapperAndTranslator(
+        {kOverflow, kClockFrequency},
+        {nh.getNamespace(), kAppendDeviceTimeSubnamespace},
+        defaults));
   } else {
     ROS_FATAL(
-        "ROS param timestamping_system should be either 'tracker' or 'ros'!");
+        "ROS param timestamping_system should be either 'tracker' or 'ros' or 'translation'!");
     return EXIT_FAILURE;
   }
 

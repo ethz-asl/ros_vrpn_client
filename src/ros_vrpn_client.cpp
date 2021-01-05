@@ -263,8 +263,7 @@ void inline getTimeStamp(const ros::Time& vicon_stamp, ros::Time* timestamp) {
     }
     case kTranslation: {
       if(device_time_translator) {
-	// Compensate for latency according to https://core.ac.uk/download/pdf/211853264.pdf
-        *timestamp = device_time_translator->update(vicon_stamp.toNSec(), ros::Time::now(), -0.0549);
+        *timestamp = device_time_translator->update(vicon_stamp.toNSec(), ros::Time::now());
       }
     }
   }

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8.0)
+cmake_minimum_required(VERSION 3.10)
 project(ros_vrpn_client)
 
 add_definitions(-std=c++11)

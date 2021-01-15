@@ -17,9 +17,9 @@
   <!-- Dependencies which this package needs to build itself. -->
   <buildtool_depend>catkin</buildtool_depend>
   <buildtool_depend>catkin_simple</buildtool_depend>
-  <buildtool_depend>message_generation</buildtool_depend>
 
   <!-- Dependencies needed after this package is compiled. -->
+  <depend>message_generation</depend>
   <depend>roscpp</depend>
   <depend>tf</depend>
   <depend>geometry_msgs</depend>

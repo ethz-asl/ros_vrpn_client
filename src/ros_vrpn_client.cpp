@@ -73,6 +73,7 @@ void VRPN_CALLBACK track_target(void*, const vrpn_TRACKERCB tracker);
 struct TargetState {
   geometry_msgs::TransformStamped measured_transform;
   geometry_msgs::TransformStamped estimated_transform;
+  geometry_msgs::PoseStamped estimated_pose;
   nav_msgs::Odometry estimated_odometry;
 };
 
@@ -108,6 +109,8 @@ class Rigid_Body {
         nh.advertise<geometry_msgs::TransformStamped>("raw_transform", 1);
     estimated_target_transform_pub_ =
         nh.advertise<geometry_msgs::TransformStamped>("estimated_transform", 1);
+    estimated_target_pose_pub_ =
+        nh.advertise<geometry_msgs::PoseStamped>("estimated_pose", 1);
     estimated_target_odometry_pub_ =
         nh.advertise<nav_msgs::Odometry>("estimated_odometry", 1);
     // Connecting to the vprn device and creating an associated tracker.
@@ -139,6 +142,11 @@ class Rigid_Body {
     estimated_target_transform_pub_.publish(target_state->estimated_transform);
   }
 
+  void publish_estimated_pose(TargetState* target_state) {
+    br.sendTransform(target_state->estimated_transform);
+    estimated_target_pose_pub_.publish(target_state->estimated_pose);
+  }
+
   // Publishes the estimated target state to the odometry message.
   void publish_estimated_odometry(TargetState* target_state) {
     estimated_target_odometry_pub_.publish(target_state->estimated_odometry);
@@ -154,6 +162,7 @@ class Rigid_Body {
   // Publishers
   ros::Publisher measured_target_transform_pub_;
   ros::Publisher estimated_target_transform_pub_;
+  ros::Publisher estimated_target_pose_pub_;
   ros::Publisher estimated_target_odometry_pub_;
   tf::TransformBroadcaster br;
   // Vprn object pointers
@@ -334,6 +343,19 @@ void VRPN_CALLBACK track_target(void*, const vrpn_TRACKERCB tracker) {
       orientation_estimate_B_W,
       target_state->estimated_transform.transform.rotation);
 
+  // Populate the estimated pose message. Published in main loop.
+  target_state->estimated_pose.header.stamp = timestamp;
+  target_state->estimated_pose.header.frame_id = coordinate_system_string;
+  target_state->estimated_pose.pose.position.x = 
+    target_state->estimated_transform.transform.translation.x;
+  target_state->estimated_pose.pose.position.y = 
+    target_state->estimated_transform.transform.translation.y;
+  target_state->estimated_pose.pose.position.z = 
+    target_state->estimated_transform.transform.translation.z;
+  tf::quaternionEigenToMsg(
+      orientation_estimate_B_W,
+      target_state->estimated_pose.pose.orientation);
+
   // Populate the estimated odometry message. Published in main loop.
   target_state->estimated_odometry.header.stamp = timestamp;
   target_state->estimated_odometry.header.frame_id = coordinate_system_string;
@@ -424,6 +446,7 @@ int main(int argc, char* argv[]) {
     if (fresh_data == true) {
       tool.publish_measured_transform(target_state);
       tool.publish_estimated_transform(target_state);
+      tool.publish_estimated_pose(target_state);
       tool.publish_estimated_odometry(target_state);
       fresh_data = false;
     }

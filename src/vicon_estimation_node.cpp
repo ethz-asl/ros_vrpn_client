@@ -29,6 +29,7 @@
 
 #include <ros/ros.h>
 #include <geometry_msgs/TransformStamped.h>
+#include <geometry_msgs/PoseStamped.h>
 #include <nav_msgs/Odometry.h>
 #include <Eigen/Geometry>
 #include <eigen_conversions/eigen_msg.h>
@@ -51,6 +52,8 @@ class ViconDataListener {
     estimated_transform_pub_ =
         nh_private.advertise<geometry_msgs::TransformStamped>(
             "estimated_transform", 10);
+    estimated_pose_pub_ =
+        nh_private.advertise<geometry_msgs::PoseStamped>("estimated_pose", 10);
     estimated_odometry_pub_ =
         nh_private.advertise<nav_msgs::Odometry>("estimated_odometry", 10);
     // Getting the object name
@@ -89,6 +92,13 @@ class ViconDataListener {
                          estimated_transform.transform.translation);
     tf::quaternionEigenToMsg(orientation_estimate_B_W,
                              estimated_transform.transform.rotation);
+    // Creating estimated pose message
+    geometry_msgs::PoseStamped estimated_pose;
+    estimated_pose.header = msg->header;
+    tf::pointEigenToMsg(position_estimate_W,
+                        estimated_pose.pose.position);
+    tf::quaternionEigenToMsg(orientation_estimate_B_W,
+                             estimated_pose.pose.orientation);
     // Creating estimated odometry message
     nav_msgs::Odometry estimated_odometry;
     estimated_odometry.header = msg->header;
@@ -103,6 +113,7 @@ class ViconDataListener {
                          estimated_odometry.twist.twist.angular);
     // Publishing the estimates
     estimated_transform_pub_.publish(estimated_transform);
+    estimated_pose_pub_.publish(estimated_pose);
     estimated_odometry_pub_.publish(estimated_odometry);
     // Publishing the estimator intermediate results
     vicon_odometry_estimator_->publishIntermediateResults(msg->header.stamp);
@@ -113,6 +124,7 @@ class ViconDataListener {
   ros::Subscriber raw_transform_sub_;
   // Estimate publishers
   ros::Publisher estimated_transform_pub_;
+  ros::Publisher estimated_pose_pub_;
   ros::Publisher estimated_odometry_pub_;
   // Name of the tracked object
   std::string object_name_;

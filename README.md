@@ -1,44 +1,37 @@
-ros_vrpn_client
-===============
+# ros_vrpn_client
 
-Ros interface for http://www.cs.unc.edu/Research/vrpn/
+[![Build Status](https://jenkins.asl.ethz.ch/buildStatus/icon?job=ros_vrpn_client)](https://jenkins.asl.ethz.ch/job/ros_vrpn_client/)
 
-Dependencies
--------------------
-vrpn_catkin package from: https://github.com/ethz-asl/vrpn_catkin
+This is a ROS interface for VRPN ("Virtual-Reality Peripheral Network"). More info about VRPN can be found in their original [publication](https://dl.acm.org/doi/10.1145/505008.505019) and on their [github](https://github.com/vrpn/vrpn).
 
+## Installation
 
-Usage
------------------
+For both Ubuntu and macOS:
+
+1. build [vrpn_catkin](https://github.com/ethz-asl/vrpn_catkin) package (catkinized version of [VRPN](https://github.com/vrpn/vrpn))
+2. build this package
+
+## Usage
+
 You have to start a ROS node per tracked object and the ROS node name has to be the name of the trackable object.
 
-     rosrun ros_vrpn_client ros_vrpn_client _object_name:=object_name _vrpn_server_ip:=192.168.1.1
+`rosrun ros_vrpn_client ros_vrpn_client _object_name:=object_name _vrpn_server_ip:=192.168.1.1`
 
 Or in a launch file:
+
 ```XML
 <arg name="object_name" default="some_object_name" />
 <node name="some_object_name_vrpn_client" type="ros_vrpn_client" pkg="ros_vrpn_client" output="screen">
- <param name="vrpn_server_ip" value="192.168.1.100" />
- <param name="object_name" value="$(arg object_name)" />
- <!-- or directly:
- <param name="object_name" value="some_object_name" /> -->
+  <param name="vrpn_server_ip" value="192.168.1.100" />
+  <param name="object_name" value="$(arg object_name)" />
+  <!-- or directly:
+  <param name="object_name" value="some_object_name" /> -->
 </node>
 ```
-Installation HowTo
-===============
-Installation Ubuntu
--------------------
-A catkinized version of VRPN can be found here: https://github.com/ethz-asl/vrpn_catkin
 
-For further information about VRPN, please consult their website:
-https://github.com/vrpn/vrpn
+## Info about coord frames
 
-Installation OS X
------------------
-Use the catkinized package above.
-
-TF coord frames
-----------------
+### TF coord frames
 
 1. /optitrak
         - world frame that we will use.
@@ -52,8 +45,8 @@ TF coord frames
    software (Trackable properties) aligns the object coord frame with
    the /optitrak frame.
 
-Coord frames vodoo
-------------------
+### Coord frames vodoo
+
 The TrackingTools software outputs the position and orientation in a
 funky coord frame which has the Y axis pointing vertically up, the X
 axis along the x axis of the calibration square and Z axis along the
@@ -63,5 +56,3 @@ We perform some rotations to get rid of this funky frame and use the
 /optitrak frame described above as our fixed world coord frame. The
 code is in the "VRPN_CALLBACK track_target" function in
 ros_vrpn_client.cpp
-
-

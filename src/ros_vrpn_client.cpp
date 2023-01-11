@@ -48,10 +48,10 @@
 #include <vrpn_Connection.h>
 #include <vrpn_Tracker.h>
 #include <Eigen/Geometry>
-#include <eigen_conversions/eigen_msg.h>
 #include <nav_msgs/Odometry.h>
 #include <geometry_msgs/TransformStamped.h>
-#include <tf/transform_broadcaster.h>
+#include <tf2_ros/transform_broadcaster.h>
+#include <tf2_eigen/tf2_eigen.h>
 #include <glog/logging.h>
 
 #include "vicon_odometry_estimator.h"
@@ -155,7 +155,7 @@ class Rigid_Body {
   ros::Publisher measured_target_transform_pub_;
   ros::Publisher estimated_target_transform_pub_;
   ros::Publisher estimated_target_odometry_pub_;
-  tf::TransformBroadcaster br;
+  tf2_ros::TransformBroadcaster br;
   // Vprn object pointers
   vrpn_Connection* connection;
   vrpn_Tracker_Remote* tracker;
@@ -319,33 +319,29 @@ void VRPN_CALLBACK track_target(void*, const vrpn_TRACKERCB tracker) {
   target_state->measured_transform.header.stamp = timestamp;
   target_state->measured_transform.header.frame_id = coordinate_system_string;
   target_state->measured_transform.child_frame_id = object_name;
-  tf::vectorEigenToMsg(position_measured_W,
+  tf2::toMsg(position_measured_W,
                        target_state->measured_transform.transform.translation);
-  tf::quaternionEigenToMsg(orientation_measured_B_W,
-                           target_state->measured_transform.transform.rotation);
+  target_state->measured_transform.transform.rotation = tf2::toMsg(orientation_measured_B_W);
 
   // Populate the estimated transform message. Published in main loop.
   target_state->estimated_transform.header.stamp = timestamp;
   target_state->estimated_transform.header.frame_id = coordinate_system_string;
   target_state->estimated_transform.child_frame_id = object_name;
-  tf::vectorEigenToMsg(position_estimate_W,
+  tf2::toMsg(position_estimate_W,
                        target_state->estimated_transform.transform.translation);
-  tf::quaternionEigenToMsg(
-      orientation_estimate_B_W,
-      target_state->estimated_transform.transform.rotation);
+  target_state->estimated_transform.transform.rotation = tf2::toMsg(
+      orientation_estimate_B_W);
 
   // Populate the estimated odometry message. Published in main loop.
   target_state->estimated_odometry.header.stamp = timestamp;
   target_state->estimated_odometry.header.frame_id = coordinate_system_string;
   target_state->estimated_odometry.child_frame_id = object_name;
-  tf::pointEigenToMsg(position_estimate_W,
-                      target_state->estimated_odometry.pose.pose.position);
-  tf::quaternionEigenToMsg(
-      orientation_estimate_B_W,
-      target_state->estimated_odometry.pose.pose.orientation);
-  tf::vectorEigenToMsg(velocity_estimate_B,
+  target_state->estimated_odometry.pose.pose.position = tf2::toMsg(position_estimate_W);
+  target_state->estimated_odometry.pose.pose.orientation = tf2::toMsg(
+      orientation_estimate_B_W);
+  tf2::toMsg(velocity_estimate_B,
                        target_state->estimated_odometry.twist.twist.linear);
-  tf::vectorEigenToMsg(rate_estimate_B,
+  tf2::toMsg(rate_estimate_B,
                        target_state->estimated_odometry.twist.twist.angular);
 
   // Indicating to the main loop the data is ready for publishing.

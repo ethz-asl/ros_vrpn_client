@@ -19,7 +19,7 @@
  * limitations under the License.
  */
 
-#include <eigen_conversions/eigen_msg.h>
+#include <tf2_eigen/tf2_eigen.h>
 
 #include "vicon_odometry_estimator.h"
 
@@ -121,30 +121,27 @@ void ViconOdometryEstimator::publishIntermediateResults(ros::Time timestamp) {
   msg.header.stamp = timestamp;
 
   // Writing the measurement to the message object
-  tf::vectorEigenToMsg(translational_estimator_results.position_measured_,
+  tf2::toMsg(translational_estimator_results.position_measured_,
                        msg.pos_measured);
   // Writing the old estimates to the message object
-  tf::vectorEigenToMsg(translational_estimator_results.position_old_,
+  tf2::toMsg(translational_estimator_results.position_old_,
                        msg.pos_old);
-  tf::vectorEigenToMsg(translational_estimator_results.velocity_old_,
+  tf2::toMsg(translational_estimator_results.velocity_old_,
                        msg.vel_old);
   // Posteriori results
-  tf::vectorEigenToMsg(translational_estimator_results.position_estimate_,
+  tf2::toMsg(translational_estimator_results.position_estimate_,
                        msg.pos_est);
-  tf::vectorEigenToMsg(translational_estimator_results.velocity_estimate_,
+  tf2::toMsg(translational_estimator_results.velocity_estimate_,
                        msg.vel_est);
 
   // Writing the measurement to the message object
-  tf::quaternionEigenToMsg(rotational_estimator_results.orientation_measured_,
-                           msg.quat_measured);
+  msg.quat_measured = tf2::toMsg(rotational_estimator_results.orientation_measured_);
   // Writing the old estimates to the message object
-  tf::quaternionEigenToMsg(rotational_estimator_results.orientation_old_,
-                           msg.quat_old);
-  tf::vectorEigenToMsg(rotational_estimator_results.rate_old_, msg.omega_old);
+  msg.quat_old = tf2::toMsg(rotational_estimator_results.orientation_old_);
+  tf2::toMsg(rotational_estimator_results.rate_old_, msg.omega_old);
   // Posteriori results
-  tf::quaternionEigenToMsg(rotational_estimator_results.orientation_estimate_,
-                           msg.quat_est);
-  tf::vectorEigenToMsg(rotational_estimator_results.rate_estimate_,
+  msg.quat_est = tf2::toMsg(rotational_estimator_results.orientation_estimate_);
+  tf2::toMsg(rotational_estimator_results.rate_estimate_,
                        msg.omega_est);
 
   // Data to do with the orientation measurement outlier detection

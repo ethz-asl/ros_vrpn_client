@@ -31,7 +31,7 @@
 #include <geometry_msgs/TransformStamped.h>
 #include <nav_msgs/Odometry.h>
 #include <Eigen/Geometry>
-#include <eigen_conversions/eigen_msg.h>
+#include <tf2_eigen/tf2_eigen.h>
 
 #include "vicon_odometry_estimator.h"
 
@@ -63,8 +63,8 @@ class ViconDataListener {
     // Extracting the relavent data from the message
     Eigen::Vector3d position_measured_W;
     Eigen::Quaterniond orientation_measured_B_W;
-    tf::vectorMsgToEigen(msg->transform.translation, position_measured_W);
-    tf::quaternionMsgToEigen(msg->transform.rotation, orientation_measured_B_W);
+    tf2::fromMsg(msg->transform.translation, position_measured_W);
+    tf2::fromMsg(msg->transform.rotation, orientation_measured_B_W);
     ros::Time timestamp = msg->header.stamp;
     // Passing the received data to the estimator
     vicon_odometry_estimator_->updateEstimate(position_measured_W,
@@ -85,21 +85,18 @@ class ViconDataListener {
     // Creating estimated transform message
     geometry_msgs::TransformStamped estimated_transform;
     estimated_transform.header = msg->header;
-    tf::vectorEigenToMsg(position_estimate_W,
+    tf2::toMsg(position_estimate_W,
                          estimated_transform.transform.translation);
-    tf::quaternionEigenToMsg(orientation_estimate_B_W,
-                             estimated_transform.transform.rotation);
+    estimated_transform.transform.rotation = tf2::toMsg(orientation_estimate_B_W);
     // Creating estimated odometry message
     nav_msgs::Odometry estimated_odometry;
     estimated_odometry.header = msg->header;
     estimated_odometry.child_frame_id = object_name_;
-    tf::pointEigenToMsg(position_estimate_W,
-                        estimated_odometry.pose.pose.position);
-    tf::quaternionEigenToMsg(orientation_estimate_B_W,
-                             estimated_odometry.pose.pose.orientation);
-    tf::vectorEigenToMsg(velocity_estimate_B,
+    estimated_odometry.pose.pose.position = tf2::toMsg(position_estimate_W);
+    estimated_odometry.pose.pose.orientation = tf2::toMsg(orientation_estimate_B_W);
+    tf2::toMsg(velocity_estimate_B,
                          estimated_odometry.twist.twist.linear);
-    tf::vectorEigenToMsg(rate_estimate_B,
+    tf2::toMsg(rate_estimate_B,
                          estimated_odometry.twist.twist.angular);
     // Publishing the estimates
     estimated_transform_pub_.publish(estimated_transform);

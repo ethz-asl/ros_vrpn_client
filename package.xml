@@ -21,7 +21,9 @@
 
   <!-- Dependencies needed after this package is compiled. -->
   <depend>roscpp</depend>
-  <depend>tf</depend>
+  <depend>tf2_ros</depend>
+  <depend>tf2_geometry_msgs</depend>
+  <depend>tf2_eigen</depend>
   <depend>geometry_msgs</depend>
   <depend>nav_msgs</depend>
   <depend>vrpn_catkin</depend>

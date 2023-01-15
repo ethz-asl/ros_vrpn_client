@@ -74,7 +74,7 @@ ament_export_dependencies(
 
 # Compile ros_vrpn_client
 add_executable(ros_vrpn_client
-	src/ros_vrpn_client.cpp
+  src/ros_vrpn_client.cpp
 )
 
 target_include_directories(ros_vrpn_client
@@ -97,7 +97,7 @@ ament_target_dependencies(ros_vrpn_client
 
 # Compile vicon_estimation_node
 add_executable(vicon_estimation_node
-	src/vicon_estimation_node.cpp
+  src/vicon_estimation_node.cpp
 )
 
 target_include_directories(vicon_estimation_node

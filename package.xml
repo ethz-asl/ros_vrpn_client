@@ -31,8 +31,6 @@
   <depend>geometry_msgs</depend>
   <depend>nav_msgs</depend>
   <depend>vrpn_vendor</depend>
-  <depend>cmake_modules</depend>
-  <depend>message_runtime</depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_clang_format</test_depend>

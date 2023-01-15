@@ -26,7 +26,8 @@
 namespace vicon_estimator
 {
 
-ViconOdometryEstimator::ViconOdometryEstimator(const rclcpp::NodeOptions & options, const std::string & node_name)
+ViconOdometryEstimator::ViconOdometryEstimator(
+  const rclcpp::NodeOptions & options, const std::string & node_name)
 : Node(node_name, options), vicon_estimator_(), verbose_(kDefaultVerboseFlag)
 {
   // Creating publisher for intermediate estimator values

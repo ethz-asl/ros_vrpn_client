@@ -357,7 +357,7 @@ void VRPN_CALLBACK track_target(void * nh_ptr, const vrpn_TRACKERCB tracker)
   // Timestamping the incomming message
   const int kMicroSecToNanoSec = 1000;
   // Changed time source to RCL_ROS_TIME to avoid errors while calculating
-  // delay. 
+  // delay.
   rclcpp::Time tracker_timestamp(
     tracker.msg_time.tv_sec, tracker.msg_time.tv_usec * kMicroSecToNanoSec, RCL_ROS_TIME);
   rclcpp::Time timestamp;

@@ -24,14 +24,13 @@
 // finally publishes position, velcocity, orientation and angular
 // velocity estimates.
 
+#include <Eigen/Geometry>
 #include <geometry_msgs/msg/transform_stamped.hpp>
+#include <iostream>
+#include <memory>
 #include <nav_msgs/msg/odometry.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <tf2_eigen/tf2_eigen.hpp>
-
-#include <Eigen/Geometry>
-#include <iostream>
-#include <memory>
 
 #include "vicon_odometry_estimator.hpp"
 
@@ -45,14 +44,15 @@ public:
   ViconDataListener(
     const rclcpp::NodeOptions & options,
     const std::shared_ptr<vicon_estimator::ViconOdometryEstimator> vicon_odometry_estimator)
-  : Node("vicon_data_listener" , options), vicon_odometry_estimator_(vicon_odometry_estimator)
+  : Node("vicon_data_listener", options), vicon_odometry_estimator_(vicon_odometry_estimator)
   {
     // Getting the object name
     this->declare_parameter<std::string>("object_name", "auk");
     this->get_parameter<std::string>("object_name", object_name_);
     // Subscribing to the raw vicon data
     raw_transform_sub_ = this->create_subscription<geometry_msgs::msg::TransformStamped>(
-      "vrpn_client/raw_transform", 10, std::bind(&ViconDataListener::transformStampedCallback, this, _1));
+      "vrpn_client/raw_transform", 10,
+      std::bind(&ViconDataListener::transformStampedCallback, this, _1));
     // Advertising the estimated target state components
     estimated_transform_pub_ =
       create_publisher<geometry_msgs::msg::TransformStamped>("estimated_transform", 10);
@@ -120,7 +120,8 @@ int main(int argc, char ** argv)
   rclcpp::NodeOptions options;
 
   // Creating a Vicon-based estimator to do the estimation
-  auto vicon_odometry_estimator = std::make_shared<vicon_estimator::ViconOdometryEstimator>(options);
+  auto vicon_odometry_estimator =
+    std::make_shared<vicon_estimator::ViconOdometryEstimator>(options);
 
   vicon_odometry_estimator->initializeParameters();
   vicon_odometry_estimator->reset();
@@ -132,7 +133,7 @@ int main(int argc, char ** argv)
   rclcpp::executors::SingleThreadedExecutor exec;
   exec.add_node(vicon_odometry_estimator);
   exec.add_node(vicon_data_listener);
-  
+
   exec.spin();
 
   rclcpp::shutdown();

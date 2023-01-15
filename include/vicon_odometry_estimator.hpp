@@ -42,7 +42,9 @@ class ViconOdometryEstimator : public rclcpp::Node
 {
 public:
   // Constructor
-  ViconOdometryEstimator(const rclcpp::NodeOptions & options, const std::string & node_name="vicon_odometry_estimator");
+  ViconOdometryEstimator(
+    const rclcpp::NodeOptions & options,
+    const std::string & node_name = "vicon_odometry_estimator");
 
   // Initialize the estimator parameters
   void initializeParameters();

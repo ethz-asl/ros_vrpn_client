@@ -118,9 +118,6 @@ ament_target_dependencies(vicon_estimation_node
   geometry_msgs
 )
 
-# TODO(): Add tests back
-# add_subdirectory(src/test)
-
 # Install targets
 install(
   TARGETS vicon_estimator
@@ -139,8 +136,14 @@ install(TARGETS
 
 # Testing
 if(BUILD_TESTING)
-  # Test linting
+  
   find_package(ament_lint_auto REQUIRED)
+  find_package(ament_cmake_gtest REQUIRED)
+
+  # Unit tests
+  add_subdirectory(src/test)
+
+  # Test linting
   ament_lint_auto_find_test_dependencies()
 
 endif()

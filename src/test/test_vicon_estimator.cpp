@@ -27,7 +27,7 @@
 #include <iostream>
 
 #include "test_helper_library.h"
-#include "vicon_estimator.h"
+#include "vicon_estimator.hpp"
 
 // Translational trajectory defines
 #define TRANS_TRAJECTORY_PERIOD 10.0

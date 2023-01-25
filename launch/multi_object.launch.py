@@ -5,15 +5,12 @@ import os
 from ament_index_python.packages import get_package_share_directory
 
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument
-from launch.substitutions import Command, LaunchConfiguration
 
-from launch_ros.actions import ComposableNodeContainer, Node
-from launch_ros.descriptions import ComposableNode
+from launch_ros.actions import Node
 
 import yaml
 
-object_names = ["roboa_base", "roboa_link_1", "roboa_link_2", "roboa_head"]
+object_names = ["object_1", "object_2", "object_3", "object_4"]
 
 
 def get_params(package, file, name):
@@ -26,9 +23,9 @@ def get_params(package, file, name):
 
 def generate_launch_description():
 
-    params = get_params("ros_vrpn",
-                        "/config/asl_vicon.yaml",
-                        "ros_vrpn_client")
+    params = get_params(
+        "ros_vrpn", "/config/asl_vicon.yaml", "ros_vrpn_client"
+    )
 
     nodes = []
     for object in object_names:
@@ -39,7 +36,7 @@ def generate_launch_description():
                 executable="ros_vrpn_client",
                 namespace=object,
                 output="screen",
-                parameters = [params],
+                parameters=[params],
             )
         )
 

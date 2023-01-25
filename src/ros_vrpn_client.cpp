@@ -360,7 +360,7 @@ void VRPN_CALLBACK track_target(void * nh_ptr, const vrpn_TRACKERCB tracker)
   // delay.
   rclcpp::Time tracker_timestamp(
     tracker.msg_time.tv_sec, tracker.msg_time.tv_usec * kMicroSecToNanoSec, RCL_ROS_TIME);
-  rclcpp::Time timestamp = nh->get_clock()->now();
+  rclcpp::Time timestamp;
   getTimeStamp(nh, tracker_timestamp, &timestamp);
 
   // Updating the estimates with the new measurements.

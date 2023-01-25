@@ -1,0 +1,20 @@
+ros_vrpn_client:
+  ros__parameters:
+    vrpn_server_ip: vicon
+    vrpn_coordinate_system: vicon
+    timestamping_system: ros
+    object_name: bluebird
+    verbose: true
+    translational_estimator/kp: 0.5
+    translational_estimator/kv: 0.5
+    rotational_estimator/orientation_estimate_initial_covariance: 100.0
+    rotational_estimator/rate_estimate_initial_covariance: 100.0
+    rotational_estimator/orientation_process_covariance: 0.000002
+    rotational_estimator/rate_process_covariance: 10.0
+    rotational_estimator/orientation_measurementCovariance: 0.001
+    rotational_estimator/outlier_rejection_method: mahalanobis_distance
+    rotational_estimator/outlier_rejection_mahalanobis_threshold: 4.0
+    rotational_estimator/outlier_rejection_subsequent_threshold_degrees: 30.0
+    rotational_estimator/outlier_rejection_subsequent_maximum_count: 50
+    rotational_estimator/output_minimal_quaternions: false
+    capability_group: Vicon

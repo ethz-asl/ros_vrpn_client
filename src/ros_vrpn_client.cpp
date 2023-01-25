@@ -302,7 +302,7 @@ void inline getTimeStamp(
       // timestamp
       double time_correction_s = time_diff_h_round * kHoursToSec;
       rclcpp::Time vicon_stamp_corrected(
-        vicon_stamp.seconds() - time_correction_s, vicon_stamp.nanoseconds());
+        vicon_stamp.seconds() - time_correction_s, vicon_stamp.nanoseconds(), RCL_ROS_TIME);
       // Attaching the corrected timestamp
       *timestamp = vicon_stamp_corrected;
       // Outputting the time delay to the ROS console
@@ -360,7 +360,7 @@ void VRPN_CALLBACK track_target(void * nh_ptr, const vrpn_TRACKERCB tracker)
   // delay.
   rclcpp::Time tracker_timestamp(
     tracker.msg_time.tv_sec, tracker.msg_time.tv_usec * kMicroSecToNanoSec, RCL_ROS_TIME);
-  rclcpp::Time timestamp;
+  rclcpp::Time timestamp = nh->get_clock()->now();
   getTimeStamp(nh, tracker_timestamp, &timestamp);
 
   // Updating the estimates with the new measurements.

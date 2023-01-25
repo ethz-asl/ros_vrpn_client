@@ -302,7 +302,7 @@ void inline getTimeStamp(
       // timestamp
       double time_correction_s = time_diff_h_round * kHoursToSec;
       rclcpp::Time vicon_stamp_corrected(
-        vicon_stamp.seconds() - time_correction_s, 0, RCL_ROS_TIME);
+        vicon_stamp.nanoseconds() - time_correction_s * 1e9, RCL_ROS_TIME);
       // Attaching the corrected timestamp
       *timestamp = vicon_stamp_corrected;
       // Outputting the time delay to the ROS console

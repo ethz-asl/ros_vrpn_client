@@ -2,7 +2,8 @@
 
 #include "test_helper_library.h"
 
-void euler2quat(double roll, double pitch, double yaw, double* q) {
+void euler2quat(double roll, double pitch, double yaw, double * q)
+{
   // Compute quaternion
   Eigen::Quaterniond q_ = Eigen::AngleAxisd(yaw, Eigen::Vector3d::UnitZ()) *
                           Eigen::AngleAxisd(pitch, Eigen::Vector3d::UnitY()) *
@@ -14,9 +15,10 @@ void euler2quat(double roll, double pitch, double yaw, double* q) {
   q[3] = q_.z();
 }
 
-void calculate3dRmsError(double truth[][3], double est[][3],
-                         const int trajectory_length, const int start_index,
-                         double* error) {
+void calculate3dRmsError(
+  double truth[][3], double est[][3], const int trajectory_length, const int start_index,
+  double * error)
+{
   // Looping over trajectories summing squared errors
   double error_sum[3] = {0.0, 0.0, 0.0};
   for (int i = start_index; i < trajectory_length; i++) {
@@ -35,20 +37,18 @@ void calculate3dRmsError(double truth[][3], double est[][3],
   error[2] = sqrt(error_sum[2]);
 }
 
-void calculateQuaternionRmsError(double truth[][4], double est[][4],
-                                 const int trajectory_length,
-                                 const int start_index, double* error) {
+void calculateQuaternionRmsError(
+  double truth[][4], double est[][4], const int trajectory_length, const int start_index,
+  double * error)
+{
   // Generating the error trajectory
   double error_trajectory[trajectory_length][3];
   for (int i = 0; i < trajectory_length; i++) {
     // Turning vectors into quaternions
-    Eigen::Quaterniond orientation_truth(truth[i][0], truth[i][1], truth[i][2],
-                                         truth[i][3]);
-    Eigen::Quaterniond orientation_estimate(est[i][0], est[i][1], est[i][2],
-                                            est[i][3]);
+    Eigen::Quaterniond orientation_truth(truth[i][0], truth[i][1], truth[i][2], truth[i][3]);
+    Eigen::Quaterniond orientation_estimate(est[i][0], est[i][1], est[i][2], est[i][3]);
     // Calculating the error quaternion
-    Eigen::Quaterniond error_quaternion =
-        orientation_estimate.inverse() * orientation_truth;
+    Eigen::Quaterniond error_quaternion = orientation_estimate.inverse() * orientation_truth;
     // Extracting the three meaningful components of the error quaternion
     error_trajectory[i][0] = error_quaternion.x();
     error_trajectory[i][1] = error_quaternion.y();

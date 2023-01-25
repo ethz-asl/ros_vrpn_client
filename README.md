@@ -1,18 +1,18 @@
-ros_vrpn_client
+ros_vrpn
 ===============
 
-Ros interface for http://www.cs.unc.edu/Research/vrpn/
+Ros2 interface for http://www.cs.unc.edu/Research/vrpn/
 
 Dependencies
 -------------------
-vrpn_catkin package from: https://github.com/ethz-asl/vrpn_catkin
+vrpn_vendor package from: https://github.com/ethz-asl/vrpn_catkin (checkout ros2 branch)
 
 
 Usage
 -----------------
 You have to start a ROS node per tracked object and the ROS node name has to be the name of the trackable object.
 
-     rosrun ros_vrpn_client ros_vrpn_client _object_name:=object_name _vrpn_server_ip:=192.168.1.1
+     ros2 run ros_vrpn ros_vrpn_client --ros-args -p object_name:=object_name -p vrpn_server_ip:=192.168.1.1
 
 Or in a launch file:
 ```XML

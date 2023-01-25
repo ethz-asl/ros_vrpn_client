@@ -302,13 +302,13 @@ void inline getTimeStamp(
       // timestamp
       double time_correction_s = time_diff_h_round * kHoursToSec;
       rclcpp::Time vicon_stamp_corrected(
-        vicon_stamp.seconds() - time_correction_s, vicon_stamp.nanoseconds(), RCL_ROS_TIME);
+        vicon_stamp.seconds() - time_correction_s, 0, RCL_ROS_TIME);
       // Attaching the corrected timestamp
       *timestamp = vicon_stamp_corrected;
       // Outputting the time delay to the ROS console
       if (nh->display_time_delay) {
         rclcpp::Duration time_diff_corrected = ros_stamp - vicon_stamp_corrected;
-        static const int kMaxMessagePeriod = 2;
+        static const int kMaxMessagePeriod = 2000;
         RCLCPP_WARN_STREAM_THROTTLE(
           nh->get_logger(), *nh->get_clock(), kMaxMessagePeriod,
           "Time delay: " << time_diff_corrected.seconds());
@@ -439,6 +439,7 @@ int main(int argc, char * argv[])
       tool->publish_estimated_odometry(target_state);
       fresh_data = false;
     }
+    exec.spin_some();
     loop_rate.sleep();
   }
 

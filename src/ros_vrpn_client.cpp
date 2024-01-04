@@ -94,6 +94,10 @@ vrpn_TRACKERCB prev_tracker;
 // Global indicating if we should display the time delays
 bool display_time_delay = true;
 
+// Global with the additional object transform
+Eigen::Quaterniond q_vicon_imu;
+Eigen::Vector3d t_vicon_imu;
+
 // Pointer to the vicon estimator. Global such that it can be accessed from the
 // callback.
 vicon_estimator::ViconOdometryEstimator* vicon_odometry_estimator = NULL;
@@ -101,8 +105,7 @@ vicon_estimator::ViconOdometryEstimator* vicon_odometry_estimator = NULL;
 class Rigid_Body {
  public:
   // Constructor
-  Rigid_Body(ros::NodeHandle& nh, std::string server_ip, int port, const std::string& object_name,
-             const Eigen::Quaterniond& q_vicon_imu, const Eigen::Vector3d& t_vicon_imu) {
+  Rigid_Body(ros::NodeHandle& nh, std::string server_ip, int port, const std::string& object_name) {
     // Advertising published topics.
     measured_target_transform_pub_ =
         nh.advertise<geometry_msgs::TransformStamped>("raw_transform", 1);
@@ -124,15 +127,11 @@ class Rigid_Body {
     //                         See detailed note above.
     // this->tracker->register_change_handler(NULL, track_target_velocity);
     // this->tracker->register_change_handler(NULL, track_target_acceleration);
-
-    // Setting the additional transform between the vicon frame placed on the
-    // object and the frame of the IMU
-    q_vicon_imu_ = q_vicon_imu;
-    t_vicon_imu_ = t_vicon_imu;
   }
 
   // Publishes the raw measured target state to the transform message.
   void publish_measured_transform(TargetState* target_state) {
+    br.sendTransform(target_state->measured_transform);
     measured_target_transform_pub_.publish(target_state->measured_transform);
   }
 
@@ -163,10 +162,6 @@ class Rigid_Body {
   // Vprn object pointers
   vrpn_Connection* connection;
   vrpn_Tracker_Remote* tracker;
-
-  // Additional object transform
-  Eigen::Quaterniond q_vicon_imu_;
-  Eigen::Vector3d t_vicon_imu_;
 };
 
 // TODO(millanea@ethz.ch): The following callbacks should be implemented if
@@ -292,6 +287,17 @@ void VRPN_CALLBACK track_target(void*, const vrpn_TRACKERCB tracker) {
   ros::Time timestamp;
   getTimeStamp(tracker_timestamp, &timestamp);
 
+  // Populate the raw measured transform message. Published in main loop.
+  target_state->measured_transform.header.stamp = timestamp;
+  target_state->measured_transform.header.frame_id = coordinate_system_string;
+  target_state->measured_transform.child_frame_id = object_name + "_measured";
+  tf2::toMsg(position_measured_W, target_state->measured_transform.transform.translation);
+  target_state->measured_transform.transform.rotation = tf2::toMsg(orientation_measured_B_W);
+
+  // Correcting the measured position and orientation for the Vicon-IMU transform
+  orientation_measured_B_W = q_vicon_imu * orientation_measured_B_W;  // Body to imu
+  position_measured_W = position_measured_W + q_vicon_imu * t_vicon_imu;
+
   // Updating the estimates with the new measurements.
   vicon_odometry_estimator->updateEstimate(position_measured_W, orientation_measured_B_W,
                                            timestamp);
@@ -308,13 +314,6 @@ void VRPN_CALLBACK track_target(void*, const vrpn_TRACKERCB tracker) {
   // Rotating the estimated global frame velocity into the body frame.
   Eigen::Vector3d velocity_estimate_B =
       orientation_estimate_B_W.toRotationMatrix().transpose() * velocity_estimate_W;
-
-  // Populate the raw measured transform message. Published in main loop.
-  target_state->measured_transform.header.stamp = timestamp;
-  target_state->measured_transform.header.frame_id = coordinate_system_string;
-  target_state->measured_transform.child_frame_id = object_name;
-  tf2::toMsg(position_measured_W, target_state->measured_transform.transform.translation);
-  target_state->measured_transform.transform.rotation = tf2::toMsg(orientation_measured_B_W);
 
   // Populate the estimated transform message. Published in main loop.
   target_state->estimated_transform.header.stamp = timestamp;
@@ -384,10 +383,13 @@ int main(int argc, char* argv[]) {
     return EXIT_FAILURE;
   }
 
+  // Creating the estimator
+  vicon_odometry_estimator = new vicon_estimator::ViconOdometryEstimator(private_nh);
+  vicon_odometry_estimator->initializeParameters(private_nh);
+  vicon_odometry_estimator->reset();
+
   // Read the rotation and translation parameters between the vicon frame placed on the object and
   // the frame of the IMU
-  Eigen::Quaterniond q_vicon_imu;
-  Eigen::Vector3d t_vicon_imu;
   private_nh.param<double>("q_vi_w", q_vicon_imu.w(), 1.0);
   private_nh.param<double>("q_vi_x", q_vicon_imu.x(), 0.0);
   private_nh.param<double>("q_vi_y", q_vicon_imu.y(), 0.0);
@@ -401,13 +403,8 @@ int main(int argc, char* argv[]) {
                   << q_vicon_imu.z() << " . Translation: " << t_vicon_imu.x() << " "
                   << t_vicon_imu.y() << " " << t_vicon_imu.z());
 
-  // Creating the estimator
-  vicon_odometry_estimator = new vicon_estimator::ViconOdometryEstimator(private_nh);
-  vicon_odometry_estimator->initializeParameters(private_nh);
-  vicon_odometry_estimator->reset();
-
   // Creating object which handles data publishing
-  Rigid_Body tool(private_nh, vrpn_server_ip, vrpn_port, object_name, q_vicon_imu, t_vicon_imu);
+  Rigid_Body tool(private_nh, vrpn_server_ip, vrpn_port, object_name);
 
   ros::Rate loop_rate(1000);  // TODO(gohlp): fix this
 

@@ -39,20 +39,20 @@
 // estimated
 // quantities and raw data are then published through ROS.
 
-#include <iostream>
-#include <stdio.h>
 #include <math.h>
+#include <stdio.h>
+
 #include <iostream>
 
+#include <Eigen/Geometry>
+#include <geometry_msgs/TransformStamped.h>
+#include <glog/logging.h>
+#include <nav_msgs/Odometry.h>
 #include <ros/ros.h>
+#include <tf2_eigen/tf2_eigen.h>
+#include <tf2_ros/transform_broadcaster.h>
 #include <vrpn_Connection.h>
 #include <vrpn_Tracker.h>
-#include <Eigen/Geometry>
-#include <nav_msgs/Odometry.h>
-#include <geometry_msgs/TransformStamped.h>
-#include <tf2_ros/transform_broadcaster.h>
-#include <tf2_eigen/tf2_eigen.h>
-#include <glog/logging.h>
 
 #include "vicon_odometry_estimator.h"
 
@@ -101,15 +101,14 @@ vicon_estimator::ViconOdometryEstimator* vicon_odometry_estimator = NULL;
 class Rigid_Body {
  public:
   // Constructor
-  Rigid_Body(ros::NodeHandle& nh, std::string server_ip, int port,
-             const std::string& object_name) {
+  Rigid_Body(ros::NodeHandle& nh, std::string server_ip, int port, const std::string& object_name,
+             const Eigen::Quaterniond& q_vicon_imu, const Eigen::Vector3d& t_vicon_imu) {
     // Advertising published topics.
     measured_target_transform_pub_ =
         nh.advertise<geometry_msgs::TransformStamped>("raw_transform", 1);
     estimated_target_transform_pub_ =
         nh.advertise<geometry_msgs::TransformStamped>("estimated_transform", 1);
-    estimated_target_odometry_pub_ =
-        nh.advertise<nav_msgs::Odometry>("estimated_odometry", 1);
+    estimated_target_odometry_pub_ = nh.advertise<nav_msgs::Odometry>("estimated_odometry", 1);
     // Connecting to the vprn device and creating an associated tracker.
     std::stringstream connection_name;
     connection_name << server_ip << ":" << port;
@@ -125,6 +124,11 @@ class Rigid_Body {
     //                         See detailed note above.
     // this->tracker->register_change_handler(NULL, track_target_velocity);
     // this->tracker->register_change_handler(NULL, track_target_acceleration);
+
+    // Setting the additional transform between the vicon frame placed on the
+    // object and the frame of the IMU
+    q_vicon_imu_ = q_vicon_imu;
+    t_vicon_imu_ = t_vicon_imu;
   }
 
   // Publishes the raw measured target state to the transform message.
@@ -159,6 +163,10 @@ class Rigid_Body {
   // Vprn object pointers
   vrpn_Connection* connection;
   vrpn_Tracker_Remote* tracker;
+
+  // Additional object transform
+  Eigen::Quaterniond q_vicon_imu_;
+  Eigen::Vector3d t_vicon_imu_;
 };
 
 // TODO(millanea@ethz.ch): The following callbacks should be implemented if
@@ -178,24 +186,21 @@ class Rigid_Body {
 
 // Corrects measured target orientation and position for differing frame
 // definitions.
-void inline correctForCoordinateSystem(
-    const Eigen::Quaterniond& orientation_in,
-    const Eigen::Vector3d& position_in, CoordinateSystem coordinate_system,
-    Eigen::Quaterniond* orientation_measured_B_W,
-    Eigen::Vector3d* position_measured_W) {
+void inline correctForCoordinateSystem(const Eigen::Quaterniond& orientation_in,
+                                       const Eigen::Vector3d& position_in,
+                                       CoordinateSystem coordinate_system,
+                                       Eigen::Quaterniond* orientation_measured_B_W,
+                                       Eigen::Vector3d* position_measured_W) {
   // Rotation to correct between optitrack and vicon
-  const Eigen::Quaterniond kqOptitrackFix(
-      Eigen::AngleAxisd(0.5 * M_PI, Eigen::Vector3d::UnitX()));
+  const Eigen::Quaterniond kqOptitrackFix(Eigen::AngleAxisd(0.5 * M_PI, Eigen::Vector3d::UnitX()));
   // Correcting measurements based on coordinate system
   switch (coordinate_system) {
     case kOptitrack: {
       // Here we rotate the Optitrack measured quaternion by qFix, a
       // Pi/2 rotation around the x-axis. By doing so we convert from
       // NED to ENU.
-      *orientation_measured_B_W =
-          kqOptitrackFix* orientation_in* kqOptitrackFix.inverse();
-      *position_measured_W =
-          Eigen::Vector3d(position_in.x(), -position_in.z(), position_in.y());
+      *orientation_measured_B_W = kqOptitrackFix * orientation_in * kqOptitrackFix.inverse();
+      *position_measured_W = Eigen::Vector3d(position_in.x(), -position_in.z(), position_in.y());
       break;
     }
     case kVicon: {
@@ -234,16 +239,14 @@ void inline getTimeStamp(const ros::Time& vicon_stamp, ros::Time* timestamp) {
       // Correcting the time stamp by the hours difference and reassembling
       // timestamp
       double time_correction_s = time_diff_h_round * kHoursToSec;
-      ros::Time vicon_stamp_corrected(vicon_stamp.sec - time_correction_s,
-                                      vicon_stamp.nsec);
+      ros::Time vicon_stamp_corrected(vicon_stamp.sec - time_correction_s, vicon_stamp.nsec);
       // Attaching the corrected timestamp
       *timestamp = vicon_stamp_corrected;
       // Outputting the time delay to the ROS console
       if (display_time_delay) {
         ros::Duration time_diff_corrected = ros_stamp - vicon_stamp_corrected;
         static const int kMaxMessagePeriod = 2;
-        ROS_WARN_STREAM_THROTTLE(kMaxMessagePeriod,
-                                 "Time delay: " << time_diff_corrected.toSec());
+        ROS_WARN_STREAM_THROTTLE(kMaxMessagePeriod, "Time delay: " << time_diff_corrected.toSec());
       }
       break;
     }
@@ -256,22 +259,19 @@ void inline getTimeStamp(const ros::Time& vicon_stamp, ros::Time* timestamp) {
 }
 
 // Compares two instances of tracker data for equality
-bool inline tracker_is_equal(const vrpn_TRACKERCB& vprn_data_1,
-                             const vrpn_TRACKERCB& vprn_data_2) {
-  return (vprn_data_1.quat[0] == vprn_data_2.quat[0] and
-          vprn_data_1.quat[1] == vprn_data_2.quat[1] and
-          vprn_data_1.quat[2] == vprn_data_2.quat[2] and
-          vprn_data_1.quat[3] == vprn_data_2.quat[3] and
-          vprn_data_1.pos[0] == vprn_data_2.pos[0] and
-          vprn_data_1.pos[1] == vprn_data_2.pos[1] and
-          vprn_data_1.pos[2] == vprn_data_2.pos[2]);
+bool inline tracker_is_equal(const vrpn_TRACKERCB& vprn_data_1, const vrpn_TRACKERCB& vprn_data_2) {
+  return (
+      vprn_data_1.quat[0] == vprn_data_2.quat[0] and vprn_data_1.quat[1] == vprn_data_2.quat[1] and
+      vprn_data_1.quat[2] == vprn_data_2.quat[2] and vprn_data_1.quat[3] == vprn_data_2.quat[3] and
+      vprn_data_1.pos[0] == vprn_data_2.pos[0] and vprn_data_1.pos[1] == vprn_data_2.pos[1] and
+      vprn_data_1.pos[2] == vprn_data_2.pos[2]);
 }
 
 // Tracker Position/Orientation Callback
 void VRPN_CALLBACK track_target(void*, const vrpn_TRACKERCB tracker) {
   // Constructing the raw measured target pose variables.
-  Eigen::Quaterniond orientation_in(tracker.quat[3], tracker.quat[0],
-                                    tracker.quat[1], tracker.quat[2]);
+  Eigen::Quaterniond orientation_in(tracker.quat[3], tracker.quat[0], tracker.quat[1],
+                                    tracker.quat[2]);
   Eigen::Vector3d position_in(tracker.pos[0], tracker.pos[1], tracker.pos[2]);
   // Constructing the measured pose variables corrected for frame definitions
   Eigen::Quaterniond orientation_measured_B_W;
@@ -293,17 +293,12 @@ void VRPN_CALLBACK track_target(void*, const vrpn_TRACKERCB tracker) {
   getTimeStamp(tracker_timestamp, &timestamp);
 
   // Updating the estimates with the new measurements.
-  vicon_odometry_estimator->updateEstimate(position_measured_W,
-                                          orientation_measured_B_W,
-                                          timestamp);
-  Eigen::Vector3d position_estimate_W = 
-      vicon_odometry_estimator->getEstimatedPosition();
-  Eigen::Vector3d velocity_estimate_W =
-      vicon_odometry_estimator->getEstimatedVelocity();
-  Eigen::Quaterniond orientation_estimate_B_W =
-      vicon_odometry_estimator->getEstimatedOrientation();
-  Eigen::Vector3d rate_estimate_B =
-      vicon_odometry_estimator->getEstimatedAngularVelocity();
+  vicon_odometry_estimator->updateEstimate(position_measured_W, orientation_measured_B_W,
+                                           timestamp);
+  Eigen::Vector3d position_estimate_W = vicon_odometry_estimator->getEstimatedPosition();
+  Eigen::Vector3d velocity_estimate_W = vicon_odometry_estimator->getEstimatedVelocity();
+  Eigen::Quaterniond orientation_estimate_B_W = vicon_odometry_estimator->getEstimatedOrientation();
+  Eigen::Vector3d rate_estimate_B = vicon_odometry_estimator->getEstimatedAngularVelocity();
   // Publishing the estimator intermediate results
   // TODO(millanea): This is really only useful for estimator debugging and
   // should be removed
@@ -312,37 +307,30 @@ void VRPN_CALLBACK track_target(void*, const vrpn_TRACKERCB tracker) {
 
   // Rotating the estimated global frame velocity into the body frame.
   Eigen::Vector3d velocity_estimate_B =
-      orientation_estimate_B_W.toRotationMatrix().transpose() *
-      velocity_estimate_W;
+      orientation_estimate_B_W.toRotationMatrix().transpose() * velocity_estimate_W;
 
   // Populate the raw measured transform message. Published in main loop.
   target_state->measured_transform.header.stamp = timestamp;
   target_state->measured_transform.header.frame_id = coordinate_system_string;
   target_state->measured_transform.child_frame_id = object_name;
-  tf2::toMsg(position_measured_W,
-                       target_state->measured_transform.transform.translation);
+  tf2::toMsg(position_measured_W, target_state->measured_transform.transform.translation);
   target_state->measured_transform.transform.rotation = tf2::toMsg(orientation_measured_B_W);
 
   // Populate the estimated transform message. Published in main loop.
   target_state->estimated_transform.header.stamp = timestamp;
   target_state->estimated_transform.header.frame_id = coordinate_system_string;
   target_state->estimated_transform.child_frame_id = object_name;
-  tf2::toMsg(position_estimate_W,
-                       target_state->estimated_transform.transform.translation);
-  target_state->estimated_transform.transform.rotation = tf2::toMsg(
-      orientation_estimate_B_W);
+  tf2::toMsg(position_estimate_W, target_state->estimated_transform.transform.translation);
+  target_state->estimated_transform.transform.rotation = tf2::toMsg(orientation_estimate_B_W);
 
   // Populate the estimated odometry message. Published in main loop.
   target_state->estimated_odometry.header.stamp = timestamp;
   target_state->estimated_odometry.header.frame_id = coordinate_system_string;
   target_state->estimated_odometry.child_frame_id = object_name;
   target_state->estimated_odometry.pose.pose.position = tf2::toMsg(position_estimate_W);
-  target_state->estimated_odometry.pose.pose.orientation = tf2::toMsg(
-      orientation_estimate_B_W);
-  tf2::toMsg(velocity_estimate_B,
-                       target_state->estimated_odometry.twist.twist.linear);
-  tf2::toMsg(rate_estimate_B,
-                       target_state->estimated_odometry.twist.twist.angular);
+  target_state->estimated_odometry.pose.pose.orientation = tf2::toMsg(orientation_estimate_B_W);
+  tf2::toMsg(velocity_estimate_B, target_state->estimated_odometry.twist.twist.linear);
+  tf2::toMsg(rate_estimate_B, target_state->estimated_odometry.twist.twist.angular);
 
   // Indicating to the main loop the data is ready for publishing.
   fresh_data = true;
@@ -360,24 +348,19 @@ int main(int argc, char* argv[]) {
   int vrpn_port;
   std::string trackedObjectName;
   std::string timestamping_system_string;
-  private_nh.param<std::string>("vrpn_server_ip", vrpn_server_ip,
-                                std::string());
+  private_nh.param<std::string>("vrpn_server_ip", vrpn_server_ip, std::string());
   private_nh.param<int>("vrpn_port", vrpn_port, 3883);
-  private_nh.param<std::string>("vrpn_coordinate_system",
-                                coordinate_system_string, "vicon");
+  private_nh.param<std::string>("vrpn_coordinate_system", coordinate_system_string, "vicon");
   private_nh.param<std::string>("object_name", object_name, "auk");
-  private_nh.param<std::string>("timestamping_system",
-                                timestamping_system_string, "tracker");
+  private_nh.param<std::string>("timestamping_system", timestamping_system_string, "tracker");
   private_nh.param<bool>("display_time_delay", display_time_delay, true);
 
   // Debug output
   std::cout << "vrpn_server_ip:" << vrpn_server_ip << std::endl;
   std::cout << "vrpn_port:" << vrpn_port << std::endl;
-  std::cout << "vrpn_coordinate_system:" << coordinate_system_string
-            << std::endl;
+  std::cout << "vrpn_coordinate_system:" << coordinate_system_string << std::endl;
   std::cout << "object_name:" << object_name << std::endl;
-  std::cout << "timestamping_system:" << timestamping_system_string
-            << std::endl;
+  std::cout << "timestamping_system:" << timestamping_system_string << std::endl;
 
   // Setting the coordinate system based on the ros param
   if (coordinate_system_string == "vicon") {
@@ -397,19 +380,34 @@ int main(int argc, char* argv[]) {
   } else if (timestamping_system_string == "ros") {
     timestamping_system = TimestampingSystem::kRosStamp;
   } else {
-    ROS_FATAL(
-        "ROS param timestamping_system should be either 'tracker' or 'ros'!");
+    ROS_FATAL("ROS param timestamping_system should be either 'tracker' or 'ros'!");
     return EXIT_FAILURE;
   }
 
+  // Read the rotation and translation parameters between the vicon frame placed on the object and
+  // the frame of the IMU
+  Eigen::Quaterniond q_vicon_imu;
+  Eigen::Vector3d t_vicon_imu;
+  private_nh.param<double>("q_vi_w", q_vicon_imu.w(), 1.0);
+  private_nh.param<double>("q_vi_x", q_vicon_imu.x(), 0.0);
+  private_nh.param<double>("q_vi_y", q_vicon_imu.y(), 0.0);
+  private_nh.param<double>("q_vi_z", q_vicon_imu.z(), 0.0);
+  private_nh.param<double>("t_vi_x", t_vicon_imu.x(), 0.0);
+  private_nh.param<double>("t_vi_y", t_vicon_imu.y(), 0.0);
+  private_nh.param<double>("t_vi_z", t_vicon_imu.z(), 0.0);
+
+  ROS_INFO_STREAM("Got additional transform between IMU and Vicon. Quaternion: "
+                  << q_vicon_imu.w() << " " << q_vicon_imu.x() << " " << q_vicon_imu.y() << " "
+                  << q_vicon_imu.z() << " . Translation: " << t_vicon_imu.x() << " "
+                  << t_vicon_imu.y() << " " << t_vicon_imu.z());
+
   // Creating the estimator
-  vicon_odometry_estimator =
-      new vicon_estimator::ViconOdometryEstimator(private_nh);
+  vicon_odometry_estimator = new vicon_estimator::ViconOdometryEstimator(private_nh);
   vicon_odometry_estimator->initializeParameters(private_nh);
   vicon_odometry_estimator->reset();
 
   // Creating object which handles data publishing
-  Rigid_Body tool(private_nh, vrpn_server_ip, vrpn_port, object_name);
+  Rigid_Body tool(private_nh, vrpn_server_ip, vrpn_port, object_name, q_vicon_imu, t_vicon_imu);
 
   ros::Rate loop_rate(1000);  // TODO(gohlp): fix this
 

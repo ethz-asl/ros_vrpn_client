@@ -21,5 +21,15 @@
     <param name="rotational_estimator/output_minimal_quaternions" value="false" />
     <param name="rotational_estimator/output_minimal_quaternions" value="false" />
     <param name="capability_group" value="$(arg capability_group)" />
+
+    <!-- Rotation of the vicon frame in the imu frame-->
+    <param name="q_vi_w" value="1.0" />
+    <param name="q_vi_x" value="0.0" />
+    <param name="q_vi_y" value="0.0" />
+    <param name="q_vi_z" value="0.0" />
+    <param name="t_vi_x" value="0.0" />
+    <param name="t_vi_y" value="0.0" />
+    <param name="t_vi_z" value="0.0" />
+
   </node>
 </launch>

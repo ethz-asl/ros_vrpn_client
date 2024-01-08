@@ -23,10 +23,10 @@
     <param name="capability_group" value="$(arg capability_group)" />
 
     <!-- Rotation of the vicon frame in the imu frame-->
-    <param name="q_vi_w" value="0.9996569" />
-    <param name="q_vi_x" value="0.0084557" />
-    <param name="q_vi_y" value="-0.024494" />
-    <param name="q_vi_z" value="-0.003807" />
+    <param name="q_vi_w" value="0.999828" />
+    <param name="q_vi_x" value="0.0167064" />
+    <param name="q_vi_y" value="-0.007213" />
+    <param name="q_vi_z" value="-0.003516" />
     <param name="t_vi_x" value="0.0" />
     <param name="t_vi_y" value="0.0" />
     <param name="t_vi_z" value="0.0" />

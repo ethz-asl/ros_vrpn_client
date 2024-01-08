@@ -295,8 +295,8 @@ void VRPN_CALLBACK track_target(void*, const vrpn_TRACKERCB tracker) {
   target_state->measured_transform.transform.rotation = tf2::toMsg(orientation_measured_B_W);
 
   // Correcting the measured position and orientation for the Vicon-IMU transform
-  orientation_measured_B_W = q_vicon_imu * orientation_measured_B_W;  // Body to imu
-  position_measured_W = position_measured_W + q_vicon_imu * t_vicon_imu;
+  orientation_measured_B_W = orientation_measured_B_W * q_vicon_imu;  // Body to imu
+  // position_measured_W = position_measured_W + q_vicon_imu * t_vicon_imu;
 
   // Updating the estimates with the new measurements.
   vicon_odometry_estimator->updateEstimate(position_measured_W, orientation_measured_B_W,

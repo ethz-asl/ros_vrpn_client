@@ -1,6 +1,16 @@
 <launch>
   <arg name="object_name" default="bluebird" />
   <arg name="capability_group" default="Vicon" />
+
+  <!-- Rotation of the vicon frame in the imu frame-->
+  <arg name="q_vi_w" default="1.0" />
+  <arg name="q_vi_x" default="0.0" />
+  <arg name="q_vi_y" default="0.0" />
+  <arg name="q_vi_z" default="0.0" />
+  <arg name="t_vi_x" default="0.0" />
+  <arg name="t_vi_y" default="0.0" />
+  <arg name="t_vi_z" default="0.0" />
+
   <node ns="$(arg object_name)" name="vrpn_client" type="ros_vrpn_client" pkg="ros_vrpn_client" output="screen">
     <param name="vrpn_server_ip" value="vicon" />
     <param name="vrpn_coordinate_system" value="vicon" />
@@ -23,13 +33,13 @@
     <param name="capability_group" value="$(arg capability_group)" />
 
     <!-- Rotation of the vicon frame in the imu frame-->
-    <param name="q_vi_w" value="0.999828" />
-    <param name="q_vi_x" value="0.0167064" />
-    <param name="q_vi_y" value="-0.007213" />
-    <param name="q_vi_z" value="-0.003516" />
-    <param name="t_vi_x" value="0.0" />
-    <param name="t_vi_y" value="0.0" />
-    <param name="t_vi_z" value="0.0" />
+    <param name="q_vi_w" value="$(arg q_vi_w)" />
+    <param name="q_vi_x" value="$(arg q_vi_x)" />
+    <param name="q_vi_y" value="$(arg q_vi_y)" />
+    <param name="q_vi_z" value="$(arg q_vi_z)" />
+    <param name="t_vi_x" value="$(arg t_vi_x)" />
+    <param name="t_vi_y" value="$(arg t_vi_y)" />
+    <param name="t_vi_z" value="$(arg t_vi_z)" />
 
   </node>
 </launch>

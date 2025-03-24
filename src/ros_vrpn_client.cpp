@@ -289,7 +289,7 @@ void inline getTimeStamp(
   switch (nh->timestamping_system) {
     case kTrackerStamp: {
       // Retreiving current ROS Time
-      rclcpp::Time ros_stamp = nh->get_clock()->now();
+      rclcpp::Time ros_stamp = nh->now();
       // Calculating the difference between the tracker attached timestamp and
       // the current ROS time.
       rclcpp::Duration time_diff = vicon_stamp - ros_stamp;
@@ -310,14 +310,14 @@ void inline getTimeStamp(
         rclcpp::Duration time_diff_corrected = ros_stamp - vicon_stamp_corrected;
         static const int kMaxMessagePeriod = 2000;
         RCLCPP_WARN_STREAM_THROTTLE(
-          nh->get_logger(), *nh->get_clock(), kMaxMessagePeriod,
+          nh->get_logger(), *nh, kMaxMessagePeriod,
           "Time delay: " << time_diff_corrected.seconds());
       }
       break;
     }
     case kRosStamp: {
       // Just attach the current ROS timestamp
-      *timestamp = nh->get_clock()->now();
+      *timestamp = nh->now();
       break;
     }
   }

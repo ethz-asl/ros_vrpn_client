@@ -47,6 +47,12 @@ jobs:
           path: catkin_ws/src/vrpn_catkin
 
       - uses: actions/checkout@v4
+        name: Checkout glog_catkin
+        with:
+          path: catkin_ws/src/glog_catkin
+          repository: ethz-asl/glog_catkin
+
+      - uses: actions/checkout@v4
         name: Checkout ros_vrpn_client
         with:
           repository: ethz-asl/ros_vrpn_client

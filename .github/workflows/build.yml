@@ -52,6 +52,10 @@ jobs:
           repository: ethz-asl/ros_vrpn_client
           path: catkin_ws/src/ros_vrpn_client
 
+      - name: Install tf2_eigen
+        run: apt update && apt install -y ros-${{ env.rosdistro }}-tf2-eigen
+        shell: bash
+
       - name: Build vrpn_catkin
         run: source /opt/ros/$rosdistro/setup.bash && catkin build ros_vrpn_client && source ${GITHUB_WORKSPACE}/catkin_ws/devel/setup.bash
         working-directory: catkin_ws

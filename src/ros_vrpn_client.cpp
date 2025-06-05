@@ -50,6 +50,7 @@
 #include <Eigen/Geometry>
 #include <nav_msgs/Odometry.h>
 #include <geometry_msgs/TransformStamped.h>
+#include <geometry_msgs/TwistStamped.h>
 #include <tf2_ros/transform_broadcaster.h>
 #include <tf2_eigen/tf2_eigen.h>
 #include <glog/logging.h>
@@ -68,12 +69,14 @@ void VRPN_CALLBACK track_target(void*, const vrpn_TRACKERCB tracker);
 // void VRPN_CALLBACK track_target_velocity(void *, const vrpn_TRACKERVELCB tv);
 // void VRPN_CALLBACK track_target_acceleration(void *, const vrpn_TRACKERACCCB
 // ta);
+void VRPN_CALLBACK track_target_velocity(void *, const vrpn_TRACKERVELCB tv);
 
 // A class representing the state of the tracked target.
 struct TargetState {
   geometry_msgs::TransformStamped measured_transform;
   geometry_msgs::TransformStamped estimated_transform;
   nav_msgs::Odometry estimated_odometry;
+  geometry_msgs::TwistStamped measured_velocity;
 };
 
 // Available coordinate systems.
@@ -110,6 +113,9 @@ class Rigid_Body {
         nh.advertise<geometry_msgs::TransformStamped>("estimated_transform", 1);
     estimated_target_odometry_pub_ =
         nh.advertise<nav_msgs::Odometry>("estimated_odometry", 1);
+
+    measured_target_velocity_pub_ =
+            nh.advertise<geometry_msgs::TwistStamped>("measured_velocity", 1);
     // Connecting to the vprn device and creating an associated tracker.
     std::stringstream connection_name;
     connection_name << server_ip << ":" << port;
@@ -123,8 +129,8 @@ class Rigid_Body {
     // NOTE(millanea@ethz.ch): The following callbacks should be added if
     // they're available.
     //                         See detailed note above.
-    // this->tracker->register_change_handler(NULL, track_target_velocity);
-    // this->tracker->register_change_handler(NULL, track_target_acceleration);
+    this->tracker->register_change_handler(NULL, track_target_velocity);
+    //this->tracker->register_change_handler(NULL, track_target_acceleration);
   }
 
   // Publishes the raw measured target state to the transform message.
@@ -144,6 +150,10 @@ class Rigid_Body {
     estimated_target_odometry_pub_.publish(target_state->estimated_odometry);
   }
 
+  void publish_measured_velocity(TargetState* target_state){
+    measured_target_velocity_pub_.publish(target_state->measured_velocity);
+  }
+
   // Passes contol to the vrpn client.
   void step_vrpn() {
     this->tracker->mainloop();
@@ -155,6 +165,8 @@ class Rigid_Body {
   ros::Publisher measured_target_transform_pub_;
   ros::Publisher estimated_target_transform_pub_;
   ros::Publisher estimated_target_odometry_pub_;
+
+  ros::Publisher measured_target_velocity_pub_;
   tf2_ros::TransformBroadcaster br;
   // Vprn object pointers
   vrpn_Connection* connection;
@@ -165,16 +177,7 @@ class Rigid_Body {
 // they're required.
 //                         See detailed note above.
 // void VRPN_CALLBACK track_target_acceleration(void *, const vrpn_TRACKERACCCB
-// ta) {
-//  std::cout<<"acceleration_callback"<<std::endl;
-//  std::cout<<"ta.vel[0]"<<ta.acc[0]<<std::endl;
-//}
 //
-// void VRPN_CALLBACK track_target_velocity(void *, const vrpn_TRACKERVELCB tv)
-// {
-//  std::cout<<"velocity_callback"<<std::endl;
-//  std::cout<<"tv.vel[0]"<<tv.vel[0]<<std::endl;
-//}
 
 // Corrects measured target orientation and position for differing frame
 // definitions.
@@ -348,6 +351,47 @@ void VRPN_CALLBACK track_target(void*, const vrpn_TRACKERCB tracker) {
   fresh_data = true;
 }
 
+
+void VRPN_CALLBACK track_target_velocity(void *, const vrpn_TRACKERVELCB tv)
+{
+  geometry_msgs::TwistStamped msg;
+  msg.header.frame_id="Vicon";
+
+  const int kMicroSecToNanoSec = 1000;
+  ros::Time tracker_timestamp(tv.msg_time.tv_sec,
+                              tv.msg_time.tv_usec * kMicroSecToNanoSec);
+  ros::Time timestamp;
+  getTimeStamp(tracker_timestamp, &msg.header.stamp);
+
+  msg.twist.linear.x = tv.vel[0];
+  msg.twist.linear.y = tv.vel[1];
+  msg.twist.linear.z = tv.vel[2];
+
+  // Calculate angular velocity
+  Eigen::Quaterniond q_rel(tv.vel_quat[3], //W
+                           tv.vel_quat[0], //X
+                           tv.vel_quat[1], //Y
+                           tv.vel_quat[2]); //Z
+  // Convert to axis-angle
+  double angle = 2.0 * std::acos(std::clamp(q_rel.w(), -1.0, 1.0));
+  double sin_half_angle = std::sqrt(1.0 - q_rel.w() * q_rel.w());
+
+  Eigen::Vector3d axis;
+  if (sin_half_angle < 1e-8) {
+    // If angle is very small, direction is ambiguous; return zero velocity
+    axis = Eigen::Vector3d::Zero();
+  } else {
+    axis = q_rel.vec() / sin_half_angle;
+  }
+
+  // Angular velocity
+  Eigen::Vector3d omega = (angle / tv.vel_quat_dt) * axis;
+  msg.twist.angular.x = omega[0];
+  msg.twist.angular.y = omega[1];
+  msg.twist.angular.z = omega[2];
+  target_state->measured_velocity = msg;
+}
+
 int main(int argc, char* argv[]) {
   ros::init(argc, argv, "vrpn_client", ros::init_options::AnonymousName);
   ros::NodeHandle nh("");
@@ -421,6 +465,7 @@ int main(int argc, char* argv[]) {
       tool.publish_measured_transform(target_state);
       tool.publish_estimated_transform(target_state);
       tool.publish_estimated_odometry(target_state);
+      tool.publish_measured_velocity(target_state);
       fresh_data = false;
     }
     loop_rate.sleep();
